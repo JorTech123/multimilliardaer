@@ -1,6 +1,6 @@
 # Koble spillet til Google Regneark
 
-Uten dette oppsettet kjører Multimilliardær i **lokal modus**: alt lagres i
+Uten dette oppsettet kjører Multimillionær i **lokal modus**: alt lagres i
 nettleseren, og bare faner på samme maskin kan spille sammen. Det holder fint for
 å prøve spillet.
 
@@ -15,7 +15,7 @@ Regn med fem minutter.
 ## 1. Lag regnearket
 
 Gå til <https://sheets.new> og lag et nytt, tomt regneark.
-Kall det for eksempel **Multimilliardær**.
+Kall det for eksempel **Multimillionær**.
 
 ## 2. Åpne Apps Script
 
@@ -40,7 +40,7 @@ Første gang ber Google om tillatelse:
 1. **Gå gjennom tillatelser**
 2. Velg Google-kontoen din
 3. Google advarer om at appen ikke er verifisert. Dette er ditt eget skript, på
-   din egen konto. Trykk **Avansert**, så **Gå til Multimilliardær (usikker)**
+   din egen konto. Trykk **Avansert**, så **Gå til Multimillionær (usikker)**
 4. **Tillat**
 
 Skriptet lager de tre fanene `Spill`, `Hendelser` og `Resultater` i regnearket, og
@@ -51,7 +51,7 @@ setter passordet til `Starveien`.
 **Distribuer → Ny distribusjon**.
 
 - Trykk tannhjulet ved siden av «Velg type», og velg **Nettapp**
-- **Beskrivelse:** hva du vil, for eksempel `Multimilliardær v1`
+- **Beskrivelse:** hva du vil, for eksempel `Multimillionær v1`
 - **Kjør som:** `Meg`
 - **Hvem har tilgang:** `Alle`
 

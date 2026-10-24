@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — småverktøy
+   Multimillionær — småverktøy
    Formatering, DOM, lagring, lyd, terninger, toast og konfetti.
    ============================================================ */
 (function (MM) {

@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — spillerens eget display
+   Multimillionær — spillerens eget display
    Alt en spiller trenger på sin egen telefon, og full innsikt
    i hva de andre holder på med.
    ============================================================ */

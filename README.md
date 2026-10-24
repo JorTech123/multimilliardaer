@@ -1,12 +1,16 @@
-# Multimilliardær
+# Multimillionær
 
 Et norsk flerspiller-brettspill som kjører rett i nettleseren. Tomter, børs og
 gjeldsbrev. Hver spiller styrer fra sin egen telefon, brettet vises på en TV, og
 alt lagres i ditt eget Google Regneark.
 
-Spillet er **inspirert av mekanikken** i Multimillionær (Damm, 1988/2017), men
-brett, tomtenavn, selskaper, sjansekort og tall er skrevet fra bunnen av. Det er
-ikke en kopi av esken, og det følger ikke med noe materiale fra originalspillet.
+Spillet følger **reglene** fra Multimillionær (Damm, 1988/2017), men brett,
+tomtenavn, selskaper, sjansekort og tall er skrevet fra bunnen av. Det er ikke
+en kopi av esken, og det følger ikke med noe materiale fra originalspillet.
+
+> Navnet er delt med Damms brettspill, som fortsatt selges. Dette er et
+> hjemmelaget hobbyprosjekt uten tilknytning til utgiveren. Skal det deles
+> bredere enn vennegjengen, er et eget navn ryddigst.
 
 ---
 
@@ -194,7 +198,7 @@ lengre parti, er dette knappene å skru på:
 | Hva | Hvor | Standard |
 |---|---|---|
 | Målformue | Vertens oppsett, eller `CONFIG.STANDARD.mal` | 2 000 000 |
-| Startkapital | Vertens oppsett | 150 000 |
+| Startkapital | Vertens oppsett | 150 000 (som regelboka) |
 | Terskel for kursbevegelse | `MM.BORS_TERSKEL` | 20 000 |
 | Startkurser | `startNiva` per serie i `MM.SERIES` | 2–5 |
 | Rente per gjeldsbrev | `MM.GJELDSBREV_RENTE` | 2 500 |

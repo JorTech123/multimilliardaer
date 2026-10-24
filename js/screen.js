@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — storskjerm
+   Multimillionær — storskjerm
    Ren visning for TV eller projektor. Ingen hemmeligheter her,
    bare brettet, børsen og hva som skjer.
    ============================================================ */
@@ -33,7 +33,7 @@
     E.vertknapper = MM.el('div', { class: 'rad', style: 'gap:.4rem' });
 
     var topp = MM.el('div', { class: 'topplinje' }, [
-      MM.el('span', { class: 'logo', text: 'Multimilliardær' }),
+      MM.el('span', { class: 'logo', text: 'Multimillionær' }),
       MM.el('span', { class: 'vokse' }),
       MM.el('span', { class: 'liten svak', text: 'Spillkode' }),
       MM.el('span', { class: 'kodelapp', text: kode }),

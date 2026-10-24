@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — oppsett
+   Multimillionær — oppsett
    Dette er den eneste filen du trenger å redigere for å koble
    spillet til ditt eget Google Regneark.
    ============================================================ */
@@ -38,7 +38,19 @@
        ---------------------------------------------------------- */
     STANDARD: {
       mal: 2000000,          // formue som utløser seier
-      startKapital: 150000,  // kontanter ved start
+
+      /* Som i regelboka: 150 000 kr.
+
+         Verdt å vite hvis dere synes det blir mange konkurser: dette
+         brettet har sine egne tomtepriser og leier, og de er hardere
+         enn esken sine. Et hotell på den dyreste serien krever
+         760 000 kr. Simulering over hundrevis av partier:
+             150 000  ->  51 % av spillerne går konkurs
+             400 000  ->  21 %, og de fleste partier ender med at
+                          noen faktisk når målformuen
+         Verten kan endre summen per spill uten å røre denne fila. */
+      startKapital: 150000,
+
       tidsgrenseMin: 0       // 0 = ingen tidsgrense, ellers minutter
     },
 

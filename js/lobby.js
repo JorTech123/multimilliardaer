@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — hovedside og venterom
+   Multimillionær — hovedside og venterom
    ============================================================ */
 (function (MM) {
   'use strict';
@@ -35,7 +35,7 @@
 
   function topp(undertittel) {
     return MM.el('div', { class: 'midt', style: 'margin-bottom:1.6rem' }, [
-      MM.el('h1', { class: 'logo logo-stor', text: 'Multimilliardær' }),
+      MM.el('h1', { class: 'logo logo-stor', text: 'Multimillionær' }),
       MM.el('div', { class: 'logo-under', text: undertittel || 'Tomter · Børs · Gjeldsbrev' })
     ]);
   }
@@ -547,7 +547,7 @@
   function visRegler() {
     MM.Lyd.klikk();
     MM.modal([
-      MM.el('h2', { text: 'Multimilliardær på to minutter' }),
+      MM.el('h2', { text: 'Multimillionær på to minutter' }),
       MM.el('div', { class: 'stabel liten' }, [
         regelPunkt('🚶', 'To kast per tur', 'Du kaster først for <b>Ola Nordmann</b> — bankens brikke — og så for din egen figur. Lander Ola på en tomt noen eier, betaler banken leia til eieren. Det er derfor det ikke finnes lønn ved START.'),
         regelPunkt('📈', 'Børsen følger brettet', 'Hver tomteserie er et aksjeselskap med 10 aksjer. For hver hele 20&nbsp;000 kr som kreves inn i leie på serien stiger kursen ett steg. Må du selv betale 20&nbsp;000+ i leie, faller kursen på alle hele serier du eier.'),

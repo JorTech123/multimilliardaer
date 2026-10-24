@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — brettvisning
+   Multimillionær — brettvisning
    Tegner 40 felt i et 11x11-rutenett, med et eget lag for brikkene
    som glir mellom feltene.
    ============================================================ */
@@ -72,7 +72,7 @@
     /* Midten */
     var midt = MM.el('div', { class: 'brettmidt' }, [
       MM.el('div', { class: 'midt' }, [
-        MM.el('div', { class: 'logo', text: 'Multimilliardær' }),
+        MM.el('div', { class: 'logo', text: 'Multimillionær' }),
         MM.el('div', { class: 'logo-under', text: 'Tomter · Børs · Gjeldsbrev' })
       ]),
       MM.el('div', { class: 'turvarsel' }),

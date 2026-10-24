@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — boter
+   Multimillionær — boter
 
    En bot er en helt vanlig spiller i tilstanden. Forskjellen er at
    ingen sitter med telefonen og trykker for den. Spillvertens klient

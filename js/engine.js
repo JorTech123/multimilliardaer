@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — regelmotor
+   Multimillionær — regelmotor
    Rene funksjoner: handling(state, action) -> { state, hendelser }
    Ingen DOM, ingen nettverk. Samme kode kjører hos alle spillere,
    så alle regner seg fram til nøyaktig samme tilstand.
@@ -263,7 +263,7 @@
     var v = sp(s, slutt.vinnerId);
     hend(ut, 'slutt',
       (v ? v.navn : 'Ingen') + ' vinner! ' +
-      (slutt.grunn === 'mal' ? 'Multimilliardær!' : slutt.grunn === 'tid' ? 'Tiden er ute.' : 'Alle andre er konkurs.'),
+      (slutt.grunn === 'mal' ? 'Multimillionær!' : slutt.grunn === 'tid' ? 'Tiden er ute.' : 'Alle andre er konkurs.'),
       slutt);
   }
   E.sjekkSlutt = sjekkSlutt;

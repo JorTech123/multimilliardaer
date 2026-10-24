@@ -1,6 +1,6 @@
 /**
  * ============================================================
- *  Multimilliardær — server i Google Apps Script
+ *  Multimillionær — server i Google Apps Script
  *  Lagrer spilltilstand, hendelseslogg og resultater i et Google Regneark.
  *
  *  Oppsett står i apps-script/OPPSETT.md. Kort fortalt:
@@ -32,7 +32,7 @@ function klargjor() {
   var e = PropertiesService.getScriptProperties();
   if (!e.getProperty('PASSORD')) e.setProperty('PASSORD', 'Starveien');
   SpreadsheetApp.getUi().alert(
-    'Multimilliardær er klargjort.\n\n' +
+    'Multimillionær er klargjort.\n\n' +
     'Passord: ' + e.getProperty('PASSORD') + '\n\n' +
     'Neste steg: Distribuer -> Ny distribusjon -> Nettapp (kjør som Meg, tilgang Alle).'
   );

@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — bakgrunnsmusikk
+   Multimillionær — bakgrunnsmusikk
 
    Alt lages i WebAudio mens du spiller. Ingen lydfiler, ingenting
    å laste ned, ingen rettighetsspørsmål.

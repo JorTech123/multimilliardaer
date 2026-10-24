@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — nettverkslag
+   Multimillionær — nettverkslag
    To likeverdige adaptere bak samme grensesnitt:
 
      Sky   = Google Apps Script + Google Regneark (ekte flerspiller)

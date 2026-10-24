@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — felles oppstart
+   Multimillionær — felles oppstart
    Sesjon, passordlås, nettstatus og hjelpetekster.
    ============================================================ */
 (function (MM) {
@@ -97,7 +97,7 @@
 
     var boks = MM.el('div', { class: 'kort midtboks steg' }, [
       MM.el('div', { class: 'laas-ikon', text: '🔐' }),
-      MM.el('h1', { class: 'logo logo-stor midt', text: 'Multimilliardær' }),
+      MM.el('h1', { class: 'logo logo-stor midt', text: 'Multimillionær' }),
       MM.el('div', { class: 'logo-under midt', style: 'margin-bottom:1.6rem', text: 'Privat bord · passord kreves' }),
       inn, feil,
       MM.el('div', { style: 'height:.9rem' }),

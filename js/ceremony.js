@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — premieutdeling
+   Multimillionær — premieutdeling
    Trommevirvel, podium som reiser seg, konfetti og spesialpriser.
    ============================================================ */
 (function (MM) {

@@ -1,5 +1,5 @@
 /* ============================================================
-   Multimilliardær — spilldata
+   Multimillionær — spilldata
    Brett, aksjeserier, sjansekort og spillefigurer.
    Eget design, inspirert av mekanikken i Multimillionær (Damm 1988/2017).
    ============================================================ */
