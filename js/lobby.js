@@ -81,7 +81,8 @@
         MM.el('div', { class: 'rad', style: 'justify-content:center;gap:.5rem' }, [
           MM.el('button', { class: 'knapp knapp-tom knapp-liten', text: 'Regler', onclick: visRegler }),
           MM.el('button', { class: 'knapp knapp-tom knapp-liten', text: 'Resultatliste', onclick: visHoyscore }),
-          MM.lydknapp()
+          MM.lydknapp(),
+          MM.musikknapp()
         ])
       ]),
       MM.Nett.erSky() ? null : MM.el('div', {
@@ -218,6 +219,66 @@
     kodeFelt.addEventListener('blur', function () { oppdaterTatte(kodeFelt.value); });
     if (kode) oppdaterTatte(kode);
 
+    /* Aktive bord — slipp å taste kode i det hele tatt */
+    var bordliste = MM.el('div');
+    if (!erVert) {
+      bordliste.appendChild(MM.el('div', { class: 'ventemelding' }, [
+        MM.el('span', { text: 'Ser etter aktive spill' }), MM.el('span', { class: 'prikker' })
+      ]));
+      MM.Nett.hentSpill().then(function (spill) {
+        bordliste.innerHTML = '';
+        if (!spill.length) {
+          bordliste.appendChild(MM.el('div', { class: 'liten svak midt', style: 'padding:.5rem',
+            text: 'Ingen aktive spill akkurat nå. Tast en kode, eller lag et nytt spill.' }));
+          return;
+        }
+        bordliste.appendChild(MM.el('div', { class: 'panel-tittel', text: 'Aktive spill' }));
+        spill.forEach(function (g) {
+          /* En eldre serverversjon sender verken spillerliste eller
+             ledige plasser. Da viser vi bordet som åpent og lar
+             BLI_MED avgjøre — bedre enn å påstå at alt er stengt. */
+          var vetAntall = typeof g.ledigePlasser === 'number';
+          var apent = g.fase === 'lobby' && (!vetAntall || g.ledigePlasser > 0);
+          var rad = MM.el('div', {
+            class: 'bordrad' + (apent ? '' : ' stengt'),
+            title: apent ? 'Trykk for å velge dette bordet'
+                         : (g.fase === 'lobby' ? 'Bordet er fullt' : 'Spillet er alt i gang')
+          }, [
+            MM.el('span', { class: 'bordkode tall', text: g.kode }),
+            MM.el('div', { class: 'vokse', style: 'min-width:0' }, [
+              MM.el('div', { class: 'bordnavn' },
+                (g.spillere || []).length
+                  ? g.spillere.map(function (p) {
+                      return MM.el('span', {
+                        class: 'bordfigur', title: p.navn,
+                        text: MM.figur(p.figur).emoji
+                      });
+                    }).concat([MM.el('span', { class: 'liten dim', text: ' ' + g.spillere.map(function (p) { return p.navn; }).join(', ') })])
+                  : [MM.el('span', { class: 'liten dim', text: 'tomt bord' })]
+              ),
+              MM.el('div', { class: 'liten svak', text:
+                (g.fase === 'lobby' ? 'Venter på start' : 'I gang') +
+                (g.vert ? ' · vert: ' + g.vert : '') +
+                (g.fase === 'lobby' && vetAntall ? ' · ' + g.ledigePlasser + ' ledige' : '')
+              })
+            ]),
+            MM.el('span', { class: 'lapp ' + (apent ? 'lapp-gronn' : ''), text: apent ? 'Bli med' : 'Stengt' })
+          ]);
+          if (apent) {
+            rad.addEventListener('click', function () {
+              MM.Lyd.klikk();
+              kodeFelt.value = g.kode;
+              MM.$$('.bordrad', bordliste).forEach(function (e) { e.classList.remove('valgtbord'); });
+              rad.classList.add('valgtbord');
+              oppdaterTatte(g.kode);
+              navnFelt.focus();
+            });
+          }
+          bordliste.appendChild(rad);
+        });
+      });
+    }
+
     var knapp = MM.el('button', {
       class: 'knapp knapp-gull knapp-stor knapp-blokk',
       html: erVert ? '✓ &nbsp;Bli med som vert' : '→ &nbsp;Bli med'
@@ -262,8 +323,12 @@
               MM.el('label', { class: 'merke', text: 'Del denne koden med de andre' }),
               MM.el('div', { class: 'kodevis', text: kode, title: 'Klikk for å kopiere', onclick: function () { kopier(kode); } })
             ])
-          : MM.el('div', { class: 'feltgruppe' }, [
-              MM.el('label', { class: 'merke', text: 'Spillkode' }), kodeFelt
+          : MM.el('div', {}, [
+              bordliste,
+              MM.el('hr', { class: 'skille' }),
+              MM.el('div', { class: 'feltgruppe' }, [
+                MM.el('label', { class: 'merke', text: 'Eller tast spillkoden' }), kodeFelt
+              ])
             ]),
         MM.el('div', { class: 'feltgruppe' }, [
           MM.el('label', { class: 'merke', text: 'Navn' }), navnFelt

@@ -104,7 +104,12 @@ a { color: var(--bla); }
   color: transparent;
   filter: drop-shadow(0 4px 18px rgba(255,207,71,.3));
 }
-.logo-stor { font-size: clamp(2.4rem, 8.5vw, 5.4rem); }
+.logo-stor {
+  /* Males mot kortets bredde, ikke vinduets. Med background-clip: text
+     blir bokstaver som faller utenfor boksen helt umalte — derfor må
+     teksten garantert få plass. */
+  font-size: clamp(1.9rem, 12cqw, 4.4rem);
+}
 .logo-under {
   font-family: var(--font-vis);
   text-transform: uppercase;
@@ -461,8 +466,8 @@ label.merke {
   justify-content: center;
   padding: 1.5rem 1rem 3rem;
 }
-.midtboks { width: min(100%, 560px); }
-.bred { width: min(100%, 880px); }
+.midtboks { width: min(100%, 560px); container-type: inline-size; }
+.bred     { width: min(100%, 880px); container-type: inline-size; }
 
 .steg { animation: steg-inn .4s cubic-bezier(.2,.9,.3,1); }
 @keyframes steg-inn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
@@ -825,3 +830,45 @@ hr.skille { border: 0; border-top: 1px solid var(--kant); margin: 1.1rem 0; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ------------------------------------------------------------
+   Liste over aktive spill
+   ------------------------------------------------------------ */
+.bordrad {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .6rem .75rem;
+  margin-bottom: .45rem;
+  background: rgba(7,11,20,.5);
+  border: 1px solid var(--kant);
+  border-radius: var(--r-m);
+  cursor: pointer;
+  transition: border-color .18s, background .18s, transform .14s;
+}
+.bordrad:hover:not(.stengt) {
+  border-color: var(--gull);
+  background: rgba(255,207,71,.07);
+  transform: translateX(2px);
+}
+.bordrad.stengt { opacity: .45; cursor: not-allowed; }
+.bordrad.valgtbord {
+  border-color: var(--gull);
+  box-shadow: var(--glod-gull);
+  background: rgba(255,207,71,.1);
+}
+.bordkode {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: .14em;
+  color: var(--gull);
+  flex-shrink: 0;
+}
+.bordnavn {
+  display: flex;
+  align-items: center;
+  gap: .18rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.bordfigur { font-size: 1.05rem; line-height: 1; }

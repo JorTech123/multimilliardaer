@@ -39,7 +39,8 @@
       MM.el('span', { class: 'kodelapp', text: kode }),
       E.klokke,
       E.vertknapper,
-      MM.lydknapp()
+      MM.lydknapp(),
+      MM.musikknapp()
     ]);
 
     E.spillere = MM.el('div', { class: 'kolonne venstre' });

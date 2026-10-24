@@ -136,13 +136,30 @@
   MM.lydknapp = function () {
     var k = MM.el('button', {
       class: 'knapp knapp-tom knapp-liten',
-      title: 'Lyd av/på',
+      title: 'Lydeffekter av/på',
       text: MM.Lyd.av ? '🔇' : '🔊'
     });
     k.addEventListener('click', function () {
       var pa = MM.Lyd.veksle();
       k.textContent = pa ? '🔊' : '🔇';
     });
+    return k;
+  };
+
+  MM.musikknapp = function () {
+    var k = MM.el('button', {
+      class: 'knapp knapp-tom knapp-liten',
+      title: 'Bakgrunnsmusikk av/på',
+      text: MM.Musikk.av ? '🎵̸' : '🎵'
+    });
+    k.addEventListener('click', function () {
+      MM.Lyd.vekk();
+      var pa = MM.Musikk.veksle();
+      k.textContent = pa ? '🎵' : '🎵̸';
+      k.classList.toggle('knapp-gull', pa);
+      MM.toast(pa ? 'Musikk på' : 'Musikk av', 'info', 1400);
+    });
+    if (MM.Musikk.spiller) k.classList.add('knapp-gull');
     return k;
   };
 
@@ -211,6 +228,9 @@
     }, { once: true });
     MM.krevPassord(function () {
       MM.nettstatus();
+      /* Nettlesere nekter lyd før siden er rørt, så musikken
+         venter på første klikk eller tastetrykk */
+      MM.Musikk.koblePaaForsteKlikk();
       cb();
     });
   };

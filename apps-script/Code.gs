@@ -145,15 +145,58 @@ function hentResultater() {
   return svar({ resultater: ut });
 }
 
+/**
+ * Aktive spill, med nok informasjon til at en ny spiller kan velge
+ * hvilket bord hen vil sette seg ved. Bare spill som er rørt det
+ * siste døgnet tas med.
+ */
 function hentListe() {
   var a = ark(ARK_SPILL);
   var siste = a.getLastRow();
   if (siste < 2) return svar({ spill: [] });
-  var rader = a.getRange(2, 1, siste - 1, 5).getValues();
-  var ut = rader.filter(function (r) { return r[0]; }).map(function (r) {
-    return { kode: r[0], v: Number(r[1]), fase: r[2], oppdatert: r[4] };
+
+  var rader = a.getRange(2, 1, siste - 1, 6).getValues();
+  var grense = Date.now() - 24 * 3600 * 1000;
+  var ut = [];
+
+  rader.forEach(function (r) {
+    if (!r[0]) return;
+    var oppdatert = r[4] instanceof Date ? r[4].getTime() : Date.parse(r[4]) || 0;
+    if (oppdatert && oppdatert < grense) return;
+    if (r[2] === 'ferdig') return;
+
+    var post = {
+      kode: String(r[0]).toUpperCase(),
+      v: Number(r[1]),
+      fase: r[2],
+      oppdatert: oppdatert,
+      spillere: [],
+      vert: ''
+    };
+
+    /* Hent navnene ut av tilstanden, men la ikke en ødelagt rad
+       velte hele lista */
+    try {
+      var s = JSON.parse(r[5]);
+      post.vert = (function () {
+        for (var i = 0; i < s.spillere.length; i++) {
+          if (s.spillere[i].id === s.vertId) return s.spillere[i].navn;
+        }
+        return '';
+      })();
+      post.spillere = s.spillere.map(function (p) {
+        return { navn: p.navn, figur: p.figur, konkurs: !!p.konkurs };
+      });
+      post.ledigePlasser = Math.max(0, 6 - s.spillere.length);
+    } catch (ignorer) {
+      post.ledigePlasser = 0;
+    }
+
+    ut.push(post);
   });
-  return svar({ spill: ut });
+
+  ut.sort(function (x, y) { return y.oppdatert - x.oppdatert; });
+  return svar({ spill: ut.slice(0, 25) });
 }
 
 /* ------------------------------------------------------------

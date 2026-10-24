@@ -47,6 +47,9 @@
     lag.appendChild(bunn);
     document.body.appendChild(lag);
 
+    /* Senk musikken mens vinneren kåres, så trommevirvelen får plass */
+    if (MM.Musikk) MM.Musikk.dukk(16);
+
     var stoppTromme = MM.Lyd.trommer();
 
     /* Topp tre i rekkefølge 3 - 2 - 1 */

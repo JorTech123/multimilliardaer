@@ -25,7 +25,7 @@
     pollMs: 1600,
     _timer: null,
     _kanal: null,
-    _henter: false
+    _venter: null
   };
 
   N.init = function (cfg) {
@@ -178,25 +178,31 @@
     N.versjon = -1;
     N._sisteSeq = 0;
     if (!N.erSky()) Lokal.lytt(N.kode);
-    return N.hentNå().then(function (s) {
-      if (!s) throw new Error('Fant ikke spillkoden ' + N.kode);
+    /* tving: vi må ha et ferskt svar her, ikke et pågående oppslag
+       fra kodefeltet eller fra pollingen */
+    return N.hentNå(true).then(function (s) {
+      if (!s) {
+        throw new Error(N.sisteFeil
+          ? 'Får ikke kontakt med serveren. ' + N.sisteFeil
+          : 'Fant ikke spillkoden ' + N.kode);
+      }
       N.start();
       return s;
     });
   };
 
-  N.hentNå = function () {
-    if (!N.kode || N._henter) return Promise.resolve(N.tilstand);
-    N._henter = true;
-    var ferdig = function (s) {
-      N._henter = false;
-      return s;
-    };
+  /* Ett oppslag om gangen. Kalles det mens et annet pågår, får man
+     det samme løftet tilbake — ikke en halvferdig tilstand. */
+  N.hentNå = function (tving) {
+    if (!N.kode) return Promise.resolve(null);
+    if (N._venter && !tving) return N._venter;
+
+    var p;
     if (N.erSky()) {
-      return Sky.get({ handling: 'tilstand', kode: N.kode, siden: N.versjon })
+      p = Sky.get({ handling: 'tilstand', kode: N.kode, siden: N.versjon })
         .then(function (svar) {
           N.sisteFeil = null;
-          if (svar.uendret) return ferdig(N.tilstand);
+          if (svar.uendret) return N.tilstand;
           if (svar.tilstand) {
             var nye = svar.tilstand.logg
               ? svar.tilstand.logg.filter(function (h) { return h.seq > (N._sisteSeq || 0); })
@@ -204,22 +210,27 @@
             N._sisteSeq = svar.tilstand.seq || 0;
             settTilstand(svar.tilstand, nye);
           }
-          return ferdig(N.tilstand);
+          return N.tilstand;
         })
         .catch(function (e) {
           N.sisteFeil = e.message;
-          N._henter = false;
           varsle([]);
           return N.tilstand;
         });
+    } else {
+      var s = Lokal.les(N.kode);
+      if (s && s.v !== N.versjon) {
+        var nye = (s.logg || []).filter(function (h) { return h.seq > (N._sisteSeq || 0); });
+        N._sisteSeq = s.seq || 0;
+        settTilstand(s, nye);
+      }
+      p = Promise.resolve(s);
     }
-    var s = Lokal.les(N.kode);
-    if (s && s.v !== N.versjon) {
-      var nye = (s.logg || []).filter(function (h) { return h.seq > (N._sisteSeq || 0); });
-      N._sisteSeq = s.seq || 0;
-      settTilstand(s, nye);
-    }
-    return Promise.resolve(ferdig(s));
+
+    N._venter = p;
+    /* Slipp vakta uansett hvordan det gikk, så den ikke låser seg */
+    p.then(function () { N._venter = null; }, function () { N._venter = null; });
+    return p;
   };
 
   N.start = function () {
@@ -321,5 +332,35 @@
   };
 
   N.lokaleSpill = function () { return Lokal.alleSpill(); };
+
+  /* ------------------------------------------------------------
+     Aktive spill — så man kan velge bord i stedet for å taste kode
+     ------------------------------------------------------------ */
+  N.hentSpill = function () {
+    if (N.erSky()) {
+      return Sky.get({ handling: 'liste' })
+        .then(function (s) { return s.spill || []; })
+        .catch(function () { return []; });
+    }
+    var grense = Date.now() - 24 * 3600 * 1000;
+    var ut = Lokal.alleSpill().filter(function (s) {
+      return s && s.fase !== 'ferdig' && (s.oppdatert || 0) > grense;
+    }).map(function (s) {
+      var vert = '';
+      (s.spillere || []).forEach(function (p) { if (p.id === s.vertId) vert = p.navn; });
+      return {
+        kode: s.id,
+        fase: s.fase,
+        oppdatert: s.oppdatert || 0,
+        vert: vert,
+        spillere: (s.spillere || []).map(function (p) {
+          return { navn: p.navn, figur: p.figur, konkurs: !!p.konkurs };
+        }),
+        ledigePlasser: Math.max(0, MM.MAKS_SPILLERE - (s.spillere || []).length)
+      };
+    });
+    ut.sort(function (a, b) { return b.oppdatert - a.oppdatert; });
+    return Promise.resolve(ut);
+  };
 
 })(window.MM = window.MM || {});

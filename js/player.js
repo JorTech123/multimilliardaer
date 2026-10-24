@@ -63,7 +63,14 @@
       MM.el('div', { style: 'text-align:right' }, [
         E.cash,
         MM.el('div', { class: 'liten svak', text: 'kontanter' })
-      ])
+      ]),
+      MM.el('button', {
+        class: 'knapp knapp-tom knapp-liten',
+        title: 'Meny',
+        style: 'padding:.3rem .55rem;font-size:1.1rem;line-height:1',
+        text: '⋯',
+        onclick: visMeny
+      })
     ]);
 
     E.formue = MM.el('div', { class: 'panel' });
@@ -86,6 +93,104 @@
     rot.appendChild(handlingslinje);
 
     brettApi = MM.Brett.lag(E.brett, { klikk: visFeltinfo });
+  }
+
+  /* ------------------------------------------------------------
+     Meny — og veien ut av spillet
+     ------------------------------------------------------------ */
+  function visMeny() {
+    MM.Lyd.klikk();
+    var lydKnapp = MM.el('button', {
+      class: 'knapp knapp-blokk',
+      text: MM.Lyd.av ? '🔇 Slå på lydeffekter' : '🔊 Slå av lydeffekter'
+    });
+    lydKnapp.addEventListener('click', function () {
+      var pa = MM.Lyd.veksle();
+      lydKnapp.textContent = pa ? '🔊 Slå av lydeffekter' : '🔇 Slå på lydeffekter';
+    });
+
+    var musKnapp = MM.el('button', {
+      class: 'knapp knapp-blokk',
+      text: MM.Musikk.av ? '🎵 Slå på musikk' : '🎵 Slå av musikk'
+    });
+    musKnapp.addEventListener('click', function () {
+      var pa = MM.Musikk.veksle();
+      musKnapp.textContent = pa ? '🎵 Slå av musikk' : '🎵 Slå på musikk';
+      volumRad.style.display = pa ? '' : 'none';
+    });
+
+    var volum = MM.el('input', {
+      type: 'range', min: 0, max: 100, value: Math.round(MM.Musikk.volum * 100),
+      style: 'width:100%'
+    });
+    volum.addEventListener('input', function () { MM.Musikk.settVolum(volum.value / 100); });
+    var volumRad = MM.el('div', {
+      class: 'panel', style: MM.Musikk.av ? 'display:none' : ''
+    }, [
+      MM.el('label', { class: 'merke', text: 'Musikkvolum' }), volum
+    ]);
+
+    var lag = MM.modal([
+      MM.el('h3', { text: 'Meny' }),
+      MM.el('div', { class: 'liten dim', style: 'margin-bottom:.9rem' }, [
+        MM.el('div', { html: 'Spillkode: <b class="tall">' + MM.esc(MM.Nett.kode || '') + '</b>' }),
+        MM.el('div', { text: MM.Nett.erSky() ? 'Lagres i Google Regneark' : 'Lokal modus — bare denne maskinen' })
+      ]),
+      MM.el('div', { class: 'stabel' }, [
+        lydKnapp,
+        musKnapp,
+        volumRad,
+        MM.el('a', {
+          class: 'knapp knapp-blokk', href: 'board.html?kode=' + (MM.Nett.kode || '') + '&som=' + minId,
+          target: '_blank', html: '📺 Åpne storskjerm'
+        }),
+        MM.el('button', {
+          class: 'knapp knapp-blokk', text: '📋 Kopier spillkoden',
+          onclick: function () {
+            try {
+              navigator.clipboard.writeText(MM.Nett.kode);
+              MM.toast('Kopiert: <b>' + MM.esc(MM.Nett.kode) + '</b>', 'ok', 2000);
+            } catch (e) { MM.toast('Kode: <b>' + MM.esc(MM.Nett.kode) + '</b>', 'info'); }
+          }
+        }),
+        MM.el('hr', { class: 'skille', style: 'margin:.4rem 0' }),
+        MM.el('button', {
+          class: 'knapp knapp-tom knapp-blokk', text: '↩ Forlat spillet',
+          onclick: function () {
+            lag.lukk();
+            bekreftForlat();
+          }
+        })
+      ]),
+      MM.el('div', { style: 'height:.7rem' }),
+      MM.el('button', {
+        class: 'knapp knapp-tom knapp-blokk', text: 'Lukk',
+        onclick: function () { lag.lukk(); }
+      })
+    ]);
+  }
+
+  function bekreftForlat() {
+    var lag = MM.modal([
+      MM.el('h3', { text: 'Forlate spillet?' }),
+      MM.el('div', { class: 'dim', style: 'margin-bottom:1rem', html:
+        'Du går tilbake til forsiden og kan starte eller bli med i et nytt spill.<br><br>' +
+        'Spillet <b>' + MM.esc(MM.Nett.kode || '') + '</b> lever videre, og figuren din blir stående. ' +
+        'Du kan komme tilbake ved å taste samme spillkode.'
+      }),
+      MM.el('div', { class: 'knapprad' }, [
+        MM.el('button', {
+          class: 'knapp knapp-rod', text: 'Ja, forlat',
+          onclick: function () {
+            MM.Nett.stopp();
+            MM.Sesjon.skriv({ kode: null });
+            MM.glem('sisteSesjon');
+            location.href = 'index.html';
+          }
+        }),
+        MM.el('button', { class: 'knapp knapp-tom', text: 'Bli', onclick: function () { lag.lukk(); } })
+      ])
+    ]);
   }
 
   /* ------------------------------------------------------------
