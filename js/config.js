@@ -18,7 +18,7 @@
           Den ser omtrent slik ut:
           https://script.google.com/macros/s/AKfycbx..../exec
        ---------------------------------------------------------- */
-    API_URL: '',
+    API_URL: 'https://script.google.com/macros/s/AKfycbxkGgbhimiEbdS1QDvKl1wplGN7e2uHG3XKyu0jghnmumhvqzkrGRjtqj9aOc0D4zHYGw/exec',
 
     /* ----------------------------------------------------------
        2) Passordet til hovedsiden.
