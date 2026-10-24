@@ -884,6 +884,13 @@
     var h = au.hoyesteId ? MM.Engine.sp(s, au.hoyesteId) : null;
     a.hvemEl.textContent = h ? 'Høyeste bud: ' + h.navn : 'Minste bud ' + MM.fmt(au.steg);
 
+    /* Bygg bare om knappene når noe som angår dem faktisk har endret
+       seg. Ellers ble de revet ned og satt opp igjen ved hvert bud,
+       og kunne flytte seg under fingeren midt i et trykk. */
+    var signatur = [au.hoyeste, au.hoyesteId, au.passert.length, p.cash, p.konkurs, harPassert].join('|');
+    if (a.signatur === signatur) return;
+    a.signatur = signatur;
+
     a.knapper.innerHTML = '';
     if (p.konkurs) {
       a.knapper.appendChild(MM.el('div', { class: 'ventemelding', text: 'Du er ute av spillet' }));

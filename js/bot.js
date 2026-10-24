@@ -53,9 +53,9 @@
      Den lette boten ser ikke faren i det hele tatt (trusselAndel 0)
      og blir tatt av den første store regningen. */
   var NIVA = {
-    lett:   { sloev: 0.42, kjopTerskel: 1.10, reserveBase: 15000, trusselAndel: 0.10, byggMargin: 1.0, byggVilje: 0.15, aksjeVilje: 0.10, budMot: 0.70, serieVekt: 1.00, ferieLyst: 0.50, casinoLyst: 0.50 },
-    normal: { sloev: 0.12, kjopTerskel: 1.00, reserveBase: 10000, trusselAndel: 0.85, byggMargin: 2.2, byggVilje: 0.50, aksjeVilje: 0.25, budMot: 1.00, serieVekt: 1.60, ferieLyst: 0.30, casinoLyst: 0.15 },
-    vrien:  { sloev: 0.00, kjopTerskel: 0.85, reserveBase: 8000,  trusselAndel: 1.25, byggMargin: 3.2, byggVilje: 0.80, aksjeVilje: 0.30, budMot: 1.25, serieVekt: 2.40, ferieLyst: 0.12, casinoLyst: 0.02 }
+    lett:   { sprangAndel: 0.50, sloev: 0.42, kjopTerskel: 1.10, reserveBase: 15000, trusselAndel: 0.10, byggMargin: 1.0, byggVilje: 0.15, aksjeVilje: 0.10, budMot: 0.70, serieVekt: 1.00, ferieLyst: 0.50, casinoLyst: 0.50 },
+    normal: { sprangAndel: 0.28, sloev: 0.12, kjopTerskel: 1.00, reserveBase: 10000, trusselAndel: 0.85, byggMargin: 2.2, byggVilje: 0.50, aksjeVilje: 0.25, budMot: 1.00, serieVekt: 1.60, ferieLyst: 0.30, casinoLyst: 0.15 },
+    vrien:  { sprangAndel: 0.12, sloev: 0.00, kjopTerskel: 0.85, reserveBase: 8000,  trusselAndel: 1.25, byggMargin: 3.2, byggVilje: 0.80, aksjeVilje: 0.30, budMot: 1.25, serieVekt: 2.40, ferieLyst: 0.12, casinoLyst: 0.02 }
   };
 
   B.NIVAER = [
@@ -204,8 +204,19 @@
         tomteverdi(s, botId, s.auksjon.pos) * n.budMot,
         MM.Engine.sp(s, botId).cash * 0.5
       );
-      var bud = (s.auksjon.hoyeste || 0) + s.auksjon.steg;
       if (s.auksjon.hoyesteId === botId) return null;      // leder alt
+
+      /* Ikke kryp oppover med minste steg. To boter som byr 1 000 av
+         gangen holder på i evigheter, og hvert bud nullstiller klokka
+         — da sitter menneskene bare og ser på. Byr heller et stykke
+         inn mot eget tak med en gang. */
+      var minste = (s.auksjon.hoyeste || 0) + s.auksjon.steg;
+      var bud = minste;
+      if (tak > minste) {
+        var sprang = Math.round((tak - minste) * n.sprangAndel * (0.6 + Math.random() * 0.8) / s.auksjon.steg) * s.auksjon.steg;
+        bud = Math.min(tak, minste + sprang);
+      }
+
       if (bud <= tak && harRaad(s, botId, bud) && Math.random() >= n.sloev * 0.5) {
         return { type: 'BUD', pid: botId, sum: bud };
       }
