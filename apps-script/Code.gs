@@ -75,6 +75,49 @@ function svar(o) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+/* ------------------------------------------------------------
+   Hurtigbuffer
+
+   Et regnearkoppslag koster nesten et sekund. Pollingen spør
+   stadig om det samme, så vi holder tilstanden og versjonen i
+   CacheService, som svarer på millisekunder.
+
+   Regnearket er fortsatt fasiten: all skriving går dit, og
+   versjonssjekken ved lagring leser derfra. Hurtigbufferen gjør
+   bare lesingen raskere, den bestemmer ingenting.
+   ------------------------------------------------------------ */
+var CACHE_SEKUNDER = 21600;   // 6 timer, som er taket i Apps Script
+var CACHE_MAKS = 90000;       // 100 kB per nøkkel; vi holder god margin
+
+function buffer() {
+  try { return CacheService.getScriptCache(); } catch (e) { return null; }
+}
+
+function bufferLes(kode) {
+  var c = buffer();
+  if (!c) return null;
+  try { return c.get('st_' + kode); } catch (e) { return null; }
+}
+
+function bufferVersjon(kode) {
+  var c = buffer();
+  if (!c) return null;
+  try {
+    var v = c.get('v_' + kode);
+    return v === null ? null : Number(v);
+  } catch (e) { return null; }
+}
+
+function bufferSkriv(kode, json, v) {
+  var c = buffer();
+  if (!c) return;
+  try {
+    c.put('v_' + kode, String(v), CACHE_SEKUNDER);
+    if (json && json.length < CACHE_MAKS) c.put('st_' + kode, json, CACHE_SEKUNDER);
+    else c.remove('st_' + kode);
+  } catch (e) { /* full buffer er ikke en feil */ }
+}
+
 function feil(melding, kodeFeil, ekstra) {
   var o = { feil: melding };
   if (kodeFeil) o.kodeFeil = kodeFeil;
@@ -119,14 +162,30 @@ function finnRad(kode) {
 function hentTilstand(p) {
   var kode = String(p.kode || '').toUpperCase();
   if (!kode) return feil('Mangler spillkode');
+  var siden = p.siden === undefined ? -1 : Number(p.siden);
+
+  /* Raskeste vei: pollingen spør om noe har endret seg. Stemmer
+     versjonen i hurtigbufferen, slipper vi regnearket helt. */
+  var bv = bufferVersjon(kode);
+  if (bv !== null && siden >= 0 && bv === siden) {
+    return svar({ uendret: true, v: bv });
+  }
+
+  /* Nest raskest: tilstanden ligger i hurtigbufferen */
+  var bufret = bufferLes(kode);
+  if (bufret && bv !== null) {
+    return svar({ tilstand: JSON.parse(bufret), v: bv });
+  }
+
+  /* Ellers fra regnearket, som alltid er fasiten */
   var rad = finnRad(kode);
   if (!rad) return svar({ tilstand: null });
   var a = ark(ARK_SPILL);
   var v = Number(a.getRange(rad, 2).getValue());
-  var siden = p.siden === undefined ? -1 : Number(p.siden);
-  if (siden >= 0 && v === siden) return svar({ uendret: true, v: v });
   var json = a.getRange(rad, 6).getValue();
   if (!json) return svar({ tilstand: null });
+  bufferSkriv(kode, json, v);
+  if (siden >= 0 && v === siden) return svar({ uendret: true, v: v });
   return svar({ tilstand: JSON.parse(json), v: v });
 }
 
@@ -229,7 +288,9 @@ function opprett(d) {
   var s = d.tilstand;
   s.v = 1;
   var a = ark(ARK_SPILL);
-  a.appendRow([kode, 1, s.fase, new Date(), new Date(), JSON.stringify(s)]);
+  var json = JSON.stringify(s);
+  a.appendRow([kode, 1, s.fase, new Date(), new Date(), json]);
+  bufferSkriv(kode, json, 1);
   ryddGamle();
   return svar({ tilstand: s, v: 1 });
 }
@@ -258,6 +319,7 @@ function lagre(d) {
   if (json.length > MAKS_CELLE) return feil('Tilstanden er for stor å lagre', 'stor');
 
   a.getRange(rad, 1, 1, 6).setValues([[kode, s.v, s.fase, a.getRange(rad, 4).getValue(), new Date(), json]]);
+  bufferSkriv(kode, json, s.v);
 
   var h = d.hendelser || [];
   if (h.length) {

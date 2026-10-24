@@ -117,7 +117,11 @@
     var e = MM.el('div', { class: 'nettstatus' + (MM.Nett.erSky() ? '' : ' lokal'), title: '' }, [lampe, tekst]);
     document.body.appendChild(e);
     setInterval(function () {
-      if (MM.Nett.sisteFeil) {
+      if (MM.Nett.synkroniserer) {
+        e.className = "nettstatus lagrer";
+        tekst.textContent = "Lagrer";
+        e.title = "Trekket er vist, og lagres nå";
+      } else if (MM.Nett.sisteFeil) {
         e.className = 'nettstatus feil';
         tekst.textContent = 'Ingen kontakt';
         e.title = MM.Nett.sisteFeil;
@@ -126,7 +130,7 @@
         tekst.textContent = MM.Nett.erSky() ? 'Sky' : 'Lokal';
         e.title = MM.Nett.erSky() ? 'Lagrer i Google Regneark' : 'Lokal modus — bare faner på denne maskinen';
       }
-    }, 2000);
+    }, 400);
     return e;
   };
 

@@ -25,7 +25,8 @@
     pollMs: 1600,
     _timer: null,
     _kanal: null,
-    _venter: null
+    _venter: null,
+    synkroniserer: false
   };
 
   N.init = function (cfg) {
@@ -54,9 +55,11 @@
     });
   }
 
-  function settTilstand(s, hendelser) {
+  function settTilstand(s, hendelser, tving) {
     if (!s) return;
-    if (N.tilstand && s.v < N.versjon) return;      // ikke gå bakover
+    /* Normalt går vi aldri bakover i versjon. Unntaket er når en
+       handling ble avvist og vi må rulle tilbake det vi viste. */
+    if (!tving && N.tilstand && s.v < N.versjon) return;
     var gammel = N.versjon;
     N.tilstand = s;
     N.versjon = s.v;
@@ -251,56 +254,90 @@
      ------------------------------------------------------------ */
   N.send = function (handling, valg) {
     valg = valg || {};
+
+    var start = N.tilstand;
+    if (!start) return Promise.reject(new Error('Ingen tilstand enda'));
+
+    /* 1. Regn ut lokalt. Er trekket ulovlig, stopper vi her og
+          serveren blir aldri plaget. */
+    var res;
+    try {
+      res = MM.Engine.handling(start, handling);
+      res.state.v = start.v + 1;
+    } catch (e) {
+      if (!valg.stille) MM.toast(MM.esc(e.message), 'feil');
+      return Promise.reject(e);
+    }
+
+    /* 2. Vis det med en gang. Spillet er turbasert, så i praksis er
+          det bare én som endrer noe av gangen — da er det ingen grunn
+          til å la spilleren vente på rundturen til Google. */
+    var tilbakefall = start;
+    var seqFor = N._sisteSeq;
+    N.synkroniserer = true;
+    N._sisteSeq = res.state.seq;
+    settTilstand(res.state, res.hendelser);
+
+    /* 3. Lagre i bakgrunnen */
     var forsok = 0;
 
-    function runde() {
-      forsok++;
-      var grunnlag = N.tilstand;
-      if (!grunnlag) return Promise.reject(new Error('Ingen tilstand enda'));
-
-      var res;
-      try {
-        res = MM.Engine.handling(grunnlag, handling);
-      } catch (e) {
-        return Promise.reject(e);
-      }
-      var ny = res.state;
-      ny.v = grunnlag.v + 1;
-
+    function lagre(r, forventetV) {
       if (!N.erSky()) {
         var naa = Lokal.les(N.kode);
-        if (naa && naa.v !== grunnlag.v) {
-          settTilstand(naa);
-          if (forsok < 5) return runde();
-          return Promise.reject(new Error('Klarte ikke lagre — prøv igjen'));
-        }
-        Lokal.skriv(N.kode, ny);
-        N._sisteSeq = ny.seq;
-        settTilstand(ny, res.hendelser);
-        return Promise.resolve(res);
+        if (naa && naa.v !== forventetV) return paaNytt(naa);
+        Lokal.skriv(N.kode, r.state);
+        return ferdig(r);
       }
-
       return Sky.post({
         handling: 'lagre',
         kode: N.kode,
-        forventetV: grunnlag.v,
-        tilstand: ny,
-        hendelser: res.hendelser
+        forventetV: forventetV,
+        tilstand: r.state,
+        hendelser: r.hendelser
       }).then(function (svar) {
         N.sisteFeil = null;
-        N._sisteSeq = ny.seq;
-        settTilstand(svar.tilstand || ny, res.hendelser);
-        return res;
+        /* Serverens svar er fasit, men hendelsene har vi alt spilt av */
+        settTilstand(svar.tilstand || r.state, [], true);
+        return ferdig(r);
       }).catch(function (e) {
-        if (e.kode === 'konflikt' && e.tilstand && forsok < 5) {
-          settTilstand(e.tilstand);
-          return runde();
-        }
+        if (e.kode === 'konflikt' && e.tilstand) return paaNytt(e.tilstand);
         throw e;
       });
     }
 
-    return runde().catch(function (e) {
+    /* Noen andre rakk å skrive først: legg handlingen oppå deres
+       ferske tilstand i stedet for å kaste den. */
+    function paaNytt(fersk) {
+      if (++forsok > 4) throw new Error('Klarte ikke lagre — prøv igjen');
+      settTilstand(fersk, [], true);
+      var r2;
+      try {
+        r2 = MM.Engine.handling(fersk, handling);
+        r2.state.v = fersk.v + 1;
+      } catch (e) {
+        /* Handlingen gir ikke mening lenger — vis serverens versjon */
+        N.synkroniserer = false;
+        throw e;
+      }
+      N._sisteSeq = r2.state.seq;
+      settTilstand(r2.state, r2.hendelser);
+      return lagre(r2, fersk.v);
+    }
+
+    function ferdig(r) {
+      N.synkroniserer = false;
+      N._sisteSeq = r.state.seq;
+      return r;
+    }
+
+    return lagre(res, start.v).catch(function (e) {
+      N.synkroniserer = false;
+      /* Lagringen feilet for godt: ta bort det vi viste på forskudd,
+         så ingen tror trekket gikk gjennom */
+      if (N.tilstand && N.tilstand.v > tilbakefall.v) {
+        N._sisteSeq = seqFor;
+        settTilstand(tilbakefall, [], true);
+      }
       if (!valg.stille) MM.toast(MM.esc(e.message), 'feil');
       throw e;
     });

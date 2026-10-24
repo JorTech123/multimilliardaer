@@ -872,3 +872,11 @@ hr.skille { border: 0; border-top: 1px solid var(--kant); margin: 1.1rem 0; }
   white-space: nowrap;
 }
 .bordfigur { font-size: 1.05rem; line-height: 1; }
+
+/* Lagring pågår: trekket er alt vist, men ikke bekreftet av serveren */
+.nettstatus.lagrer { border-color: rgba(255,207,71,.5); color: var(--gull); }
+.nettstatus.lagrer .lampe {
+  background: var(--gull);
+  box-shadow: 0 0 8px var(--gull);
+  animation: lampe .7s ease-in-out infinite;
+}
