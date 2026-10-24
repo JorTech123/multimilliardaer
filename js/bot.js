@@ -399,6 +399,16 @@
       if (!s || venter) return;
       if (!B.minAnsvar(s, minId)) return;
 
+      /* En utløpt auksjon som ingen har avsluttet. Det skjer når en bot
+         har turen: da sitter det ingen der og trykker. Driveren rydder. */
+      if (s.auksjon && Date.now() > s.auksjon.utgaar + 1500) {
+        venter = true;
+        MM.Nett.send({ type: 'AUKSJON_SLUTT', pid: minId }, { stille: true })
+          .catch(function () { /* en annen rakk det først */ })
+          .then(function () { venter = false; });
+        return;
+      }
+
       var botId = botSomMaaHandle(s);
       if (!botId) return;
 

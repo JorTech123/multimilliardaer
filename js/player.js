@@ -855,10 +855,27 @@
         auksjonVist.klokkeEl.classList.toggle('hast', igjen < 5000);
         auksjonVist.stolpe.querySelector('i').style.width =
           Math.max(0, Math.min(100, igjen / (MM.AUKSJON_SEKUNDER * 1000) * 100)) + '%';
-        /* Den som har turen avslutter auksjonen når tiden er ute */
-        if (igjen <= 0 && MM.Engine.aktivId(T) === minId) {
-          MM.Nett.send({ type: 'AUKSJON_SLUTT', pid: minId }, { stille: true }).catch(function () {});
-        }
+
+        if (igjen > 0 || auksjonVist.avslutter) return;
+
+        /* Når tiden er ute må noen slå klubba i bordet.
+           Den som har turen gjør det normalt. Men har en bot turen,
+           sitter det ingen der og trykker — da trer spillverten inn.
+           Og har ingen av dem gjort det etter tre sekunder, gjør hvem
+           som helst det. Versjonssjekken sørger for at bare ett
+           forsøk vinner, så det gjør ingenting om flere prøver. */
+        var aktivId = MM.Engine.aktivId(T);
+        var aktivErBot = (MM.Engine.sp(T, aktivId) || {}).erBot;
+        var minTur = aktivId === minId;
+        var erVert = T.vertId === minId;
+        var harStattLenge = igjen < -3000;
+
+        if (!minTur && !(aktivErBot && erVert) && !harStattLenge) return;
+
+        auksjonVist.avslutter = true;
+        MM.Nett.send({ type: 'AUKSJON_SLUTT', pid: minId }, { stille: true })
+          .catch(function () { /* en annen rakk det først */ })
+          .then(function () { if (auksjonVist) auksjonVist.avslutter = false; });
       }, 250);
     }
 
