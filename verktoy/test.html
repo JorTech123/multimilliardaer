@@ -34,6 +34,7 @@
 <script src="../js/util.js"></script>
 <script src="../js/data.js"></script>
 <script src="../js/engine.js"></script>
+<script src="../js/bot.js"></script>
 <script>
 (function () {
   'use strict';
@@ -328,6 +329,129 @@
   document.getElementById('kjor').addEventListener('click', function () { kjor(200, false); });
   document.getElementById('kjor1').addEventListener('click', function () { kjor(1, true); });
   window.MM_TEST = kjor;
+
+  /* ----------------------------------------------------------
+     Botturnering: spiller nivåene mot hverandre og sjekker både
+     at trekkene er lovlige og at vanskelighetsgraden betyr noe.
+     ---------------------------------------------------------- */
+  window.MM_TEST_BOT = function (partier) {
+    brudd = [];
+    var seire = { lett: 0, normal: 0, vrien: 0 };
+    var formue = { lett: 0, normal: 0, vrien: 0 };
+    var konkurs = { lett: 0, normal: 0, vrien: 0 };
+    var eide = {
+      lett:   { tomter:0, hus:0, aksjer:0, gjeld:0, cash:0 },
+      normal: { tomter:0, hus:0, aksjer:0, gjeld:0, cash:0 },
+      vrien:  { tomter:0, hus:0, aksjer:0, gjeld:0, cash:0 }
+    };
+    var avvist = 0, trekkTotalt = 0, tomme = 0;
+    var nivaer = ['lett', 'normal', 'vrien'];
+
+    for (var n = 0; n < partier; n++) {
+      var s = MM.Engine.nyttSpill('BOTT', { mal: 2000000, startKapital: 150000, tidsgrenseMin: 0 });
+      nivaer.forEach(function (niv, i) {
+        s = MM.Engine.handling(s, {
+          type: 'BLI_MED', pid: 'b' + i, navn: niv, figur: MM.FIGURER[i].id,
+          erBot: true, botNiva: niv
+        }).state;
+      });
+      /* Et menneske må være vert, ellers kan ingen starte */
+      s.vertId = 'b0';
+      s = MM.Engine.handling(s, { type: 'START', pid: 'b0' }).state;
+
+      var trekk = 0;
+      while (s.fase === 'spiller' && trekk < 6000) {
+        var hvem = null;
+        if (s.auksjon) {
+          hvem = s.spillere.filter(function (p) {
+            return !p.konkurs && s.auksjon.passert.indexOf(p.id) < 0 && s.auksjon.hoyesteId !== p.id;
+          })[0];
+          if (!hvem) { s = MM.Engine.handling(s, { type: 'AUKSJON_SLUTT', pid: 'b0', tving: true }).state; trekk++; continue; }
+        } else {
+          hvem = MM.Engine.sp(s, MM.Engine.aktivId(s));
+        }
+        if (!hvem) break;
+
+        var a = MM.Bot.velgTrekk(s, hvem.id);
+        if (!a) {
+          tomme++;
+          /* Boten vet ikke hva den skal gjøre — det er i seg selv en feil
+             hvis den har turen og ingenting venter */
+          if (!s.auksjon && MM.Engine.aktivId(s) === hvem.id) {
+            brudd.push('Bot uten trekk ved steg ' + s.tur.steg +
+                       (s.tur.ventende ? ' / ventende ' + s.tur.ventende.type : ''));
+            break;
+          }
+          break;
+        }
+        try {
+          s = MM.Engine.handling(s, a).state;
+          trekkTotalt++;
+        } catch (e) {
+          avvist++;
+          brudd.push('Ulovlig bottrekk ' + a.type + ': ' + e.message);
+          if (avvist > 30) break;
+        }
+        trekk++;
+        if (trekk % 50 === 0) sjekkTilstand(s, 'bot trekk ' + trekk);
+      }
+
+      sjekkTilstand(s, 'bot slutt');
+      if (s.resultat) {
+        s.resultat.forEach(function (r) {
+          if (formue[r.navn] !== undefined) formue[r.navn] += r.formue;
+          if (r.konkurs && konkurs[r.navn] !== undefined) konkurs[r.navn]++;
+        });
+        var vinner = s.resultat[0];
+        if (vinner && seire[vinner.navn] !== undefined) seire[vinner.navn]++;
+      }
+      /* Hva eide de da det smalt? */
+      s.spillere.forEach(function (p) {
+        if (eide[p.navn] === undefined) return;
+        var t = 0, hus = 0, aksjer = 0;
+        for (var pos in s.tomter) {
+          var d = s.tomter[pos];
+          if (d.eier !== p.id) continue;
+          t++; hus += (d.hus || 0) + (d.hotell ? 4 : 0) + (d.slott ? 5 : 0);
+        }
+        MM.SERIES.forEach(function (se) { aksjer += p.aksjer[se.id] || 0; });
+        eide[p.navn].tomter += t;
+        eide[p.navn].hus += hus;
+        eide[p.navn].aksjer += aksjer;
+        eide[p.navn].gjeld += p.gjeld;
+        eide[p.navn].cash += p.cash;
+      });
+    }
+
+    return {
+      partier: partier,
+      seire: seire,
+      konkurs: konkurs,
+      snitt: (function () {
+        var o = {};
+        Object.keys(eide).forEach(function (k) {
+          o[k] = {
+            tomter: (eide[k].tomter / partier).toFixed(1),
+            hus:    (eide[k].hus / partier).toFixed(1),
+            aksjer: (eide[k].aksjer / partier).toFixed(1),
+            gjeld:  (eide[k].gjeld / partier).toFixed(2),
+            cash:   Math.round(eide[k].cash / partier)
+          };
+        });
+        return o;
+      })(),
+      snittformue: {
+        lett: Math.round(formue.lett / partier),
+        normal: Math.round(formue.normal / partier),
+        vrien: Math.round(formue.vrien / partier)
+      },
+      ulovligeTrekk: avvist,
+      lovligeTrekk: trekkTotalt,
+      botUtenTrekk: tomme,
+      regelbrudd: brudd.length,
+      forsteBrudd: brudd.slice(0, 5)
+    };
+  };
 
   /* Lag et ferdig spilt parti og legg det i lokal lagring, slik at man
      kan se på brett, spillerpanel og premieutdeling uten å spille selv.

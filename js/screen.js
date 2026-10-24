@@ -40,7 +40,13 @@
       E.klokke,
       E.vertknapper,
       MM.lydknapp(),
-      MM.musikknapp()
+      MM.musikknapp(),
+      MM.el('a', {
+        class: 'knapp knapp-tom knapp-liten',
+        href: 'index.html',
+        title: 'Tilbake til forsiden',
+        html: '↩ Forsiden'
+      })
     ]);
 
     E.spillere = MM.el('div', { class: 'kolonne venstre' });
@@ -143,7 +149,7 @@
         MM.el('span', { class: 'em', text: f.emoji }),
         MM.el('div', { style: 'min-width:0' }, [
           MM.el('div', { class: 'nv' }, [
-            MM.el('span', { text: p.navn }),
+            MM.el('span', { text: (p.erBot ? '🤖 ' : '') + p.navn }),
             p.id === s.vertId ? MM.el('span', { class: 'lapp lapp-gull', style: 'margin-left:.35rem', text: 'Vert' }) : null
           ]),
           MM.el('div', { class: 'detalj' }, [

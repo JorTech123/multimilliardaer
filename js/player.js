@@ -30,6 +30,9 @@
       MM.Nett.pa(oppdater);
       MM.Nett.start();
       startPuls();
+      /* Botene trenger noen til å trykke for seg. Det blir spillverten,
+         slik at bare én klient tar trekkene deres. */
+      MM.Bot.start(function () { return T; }, minId);
     }).catch(function (e) {
       MM.toast(MM.esc(e.message), 'feil', 6000);
       setTimeout(function () { location.href = 'index.html'; }, 1800);
@@ -491,7 +494,7 @@
       }, [
         MM.el('span', { class: 'em', text: f.emoji }),
         MM.el('div', { style: 'min-width:0' }, [
-          MM.el('div', { class: 'nv', text: q.navn }),
+          MM.el('div', { class: 'nv', text: (q.erBot ? '🤖 ' : '') + q.navn }),
           MM.el('div', { class: 'detalj' }, [
             MM.el('span', { text: '🏠 ' + antTomter }),
             MM.el('span', { text: '📈 ' + antAksjer }),

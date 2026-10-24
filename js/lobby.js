@@ -411,6 +411,7 @@
         }, [
           MM.el('span', { class: 'em', text: f.emoji }),
           MM.el('span', { class: 'nv', text: p.navn }),
+          p.erBot ? MM.el('span', { class: 'lapp', text: '🤖 ' + (p.botNiva || 'normal') }) : null,
           p.id === t.vertId ? MM.el('span', { class: 'lapp lapp-gull', text: 'Vert' }) : null,
           p.id === minId ? MM.el('span', { class: 'lapp lapp-bla', text: 'Deg' }) : null
         ]));
@@ -438,9 +439,54 @@
             'Tidsgrense: <b>' + (t.regler.tidsgrenseMin ? t.regler.tidsgrenseMin + ' min' : 'ingen') + '</b>'
           })
         ]));
+        /* ---- Boter ---- */
+        var boter = t.spillere.filter(function (p) { return p.erBot; });
+        var naVaerende = boter.length ? boter[0].botNiva : MM.hent('botNiva', 'normal');
+
+        var nivaValg = MM.el('select', { class: 'felt', style: 'margin-bottom:.5rem' });
+        MM.Bot.NIVAER.forEach(function (n) {
+          nivaValg.appendChild(MM.el('option', {
+            value: n.id, text: n.navn + ' — ' + n.beskrivelse,
+            selected: n.id === naVaerende ? 'selected' : null
+          }));
+        });
+        nivaValg.addEventListener('change', function () {
+          MM.lagre('botNiva', nivaValg.value);
+          if (boter.length) {
+            MM.Nett.send({ type: 'SETT_BOT_NIVA', pid: minId, botNiva: nivaValg.value });
+          }
+        });
+
+        var botPanel = MM.el('div', { class: 'panel', style: 'margin-bottom:.8rem' }, [
+          MM.el('div', { class: 'panel-tittel', text: '🤖 Boter' }),
+          MM.el('div', { class: 'liten dim', style: 'margin-bottom:.5rem', text:
+            boter.length
+              ? boter.length + ' bot' + (boter.length > 1 ? 'er' : '') + ' ved bordet. Spill alene, eller fyll opp et halvfullt bord.'
+              : 'Vil du spille alene, eller mangler dere folk? Legg til boter.'
+          }),
+          nivaValg,
+          MM.el('div', { class: 'knapprad' }, [
+            MM.el('button', {
+              class: 'knapp knapp-liten', html: '+ Legg til bot',
+              disabled: t.spillere.length >= MM.MAKS_SPILLERE ? 'disabled' : null,
+              onclick: function () {
+                MM.Nett.send({ type: 'LEGG_TIL_BOT', pid: minId, botNiva: nivaValg.value })
+                  .then(function () { MM.Lyd.klikk(); });
+              }
+            }),
+            MM.el('button', {
+              class: 'knapp knapp-liten knapp-tom', text: '− Fjern bot',
+              disabled: boter.length ? null : 'disabled',
+              onclick: function () { MM.Nett.send({ type: 'FJERN_BOT', pid: minId }); }
+            })
+          ])
+        ]);
+        vertPanel.appendChild(botPanel);
+
         vertPanel.appendChild(startKnapp);
         if (t.spillere.length < 2) {
-          vertPanel.appendChild(MM.el('div', { class: 'liten dim midt', style: 'margin-top:.5rem', text: 'Minst to spillere for å starte' }));
+          vertPanel.appendChild(MM.el('div', { class: 'liten dim midt', style: 'margin-top:.5rem',
+            text: 'Minst to spillere for å starte — en bot teller' }));
         }
       } else {
         var vert = MM.Engine.sp(t, t.vertId);

@@ -320,6 +320,12 @@
      handling() — ett inngangspunkt for alle handlinger
      ------------------------------------------------------------ */
   E.handling = function (inn, a) {
+    /* krevSeq lar en avsender si «bare hvis ingenting har skjedd siden».
+       Botdriveren bruker det, slik at to åpne faner hos samme spillvert
+       ikke kan komme til å ta botens tur to ganger. */
+    if (a.krevSeq !== undefined && inn.seq !== a.krevSeq) {
+      throw new Error('Tilstanden har endret seg — trekket ble forkastet');
+    }
     var s = klon(inn);
     var ut = [];
     var fn = HANDLINGER[a.type];
@@ -347,6 +353,8 @@
       id: a.pid,
       navn: (a.navn || 'Spiller').slice(0, 18),
       figur: figur,
+      erBot: !!a.erBot,
+      botNiva: a.erBot ? (a.botNiva || 'normal') : null,
       cash: s.regler.startKapital,
       pos: 0,
       aksjer: {},
@@ -362,8 +370,60 @@
     };
     MM.SERIES.forEach(function (se) { p.aksjer[se.id] = 0; });
     s.spillere.push(p);
-    if (!s.vertId) { s.vertId = p.id; }
-    hend(ut, 'bli-med', p.navn + ' er med i spillet', { pid: p.id, figur: figur });
+    /* En bot kan aldri være spillvert — noen må kunne styre bordet */
+    if (!s.vertId && !p.erBot) { s.vertId = p.id; }
+    hend(ut, 'bli-med',
+      p.navn + (p.erBot ? ' (bot, ' + p.botNiva + ') er med' : ' er med i spillet'),
+      { pid: p.id, figur: figur, bot: p.erBot });
+  };
+
+  /* ---------- Boter ---------- */
+  var BOT_NAVN = ['Algo-Arne', 'Bit-Bjørg', 'Data-Dagny', 'Kode-Knut', 'Logikk-Lise', 'Nevro-Nils'];
+
+  HANDLINGER.LEGG_TIL_BOT = function (s, a, ut) {
+    if (a.pid !== s.vertId) throw new Error('Bare spillverten kan legge til boter');
+    if (s.fase !== 'lobby') throw new Error('Boter må legges til før start');
+    if (s.spillere.length >= MM.MAKS_SPILLERE) throw new Error('Bordet er fullt');
+
+    var brukte = s.spillere.map(function (p) { return p.navn; });
+    var navn = BOT_NAVN.filter(function (n) { return brukte.indexOf(n) < 0; })[0]
+            || ('Bot ' + (s.spillere.length + 1));
+
+    var tatt = s.spillere.map(function (p) { return p.figur; });
+    var figur = (MM.FIGURER.filter(function (f) { return tatt.indexOf(f.id) < 0; })[0] || MM.FIGURER[0]).id;
+
+    HANDLINGER.BLI_MED(s, {
+      pid: 'bot_' + Math.random().toString(36).slice(2, 9),
+      navn: navn,
+      figur: figur,
+      erBot: true,
+      botNiva: a.botNiva || 'normal'
+    }, ut);
+  };
+
+  HANDLINGER.FJERN_BOT = function (s, a, ut) {
+    if (a.pid !== s.vertId) throw new Error('Bare spillverten kan fjerne boter');
+    if (s.fase !== 'lobby') throw new Error('For seint');
+    var i = -1;
+    for (var j = s.spillere.length - 1; j >= 0; j--) {
+      if (s.spillere[j].erBot && (!a.mal || s.spillere[j].id === a.mal)) { i = j; break; }
+    }
+    if (i < 0) throw new Error('Ingen bot å fjerne');
+    var fjernet = s.spillere.splice(i, 1)[0];
+    hend(ut, 'bot-fjernet', fjernet.navn + ' ble fjernet fra bordet', { pid: fjernet.id });
+  };
+
+  HANDLINGER.SETT_BOT_NIVA = function (s, a, ut) {
+    if (a.pid !== s.vertId) throw new Error('Bare spillverten');
+    if (s.fase !== 'lobby') throw new Error('For seint');
+    var endret = 0;
+    s.spillere.forEach(function (p) {
+      if (!p.erBot) return;
+      if (a.mal && p.id !== a.mal) return;
+      p.botNiva = a.botNiva;
+      endret++;
+    });
+    if (endret) hend(ut, 'regler', 'Botene spiller nå på nivå: ' + a.botNiva, { niva: a.botNiva });
   };
 
   HANDLINGER.VELG_FIGUR = function (s, a, ut) {

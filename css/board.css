@@ -429,10 +429,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  overflow: hidden;
+  justify-content: flex-start;
+  padding: 1.5rem 1.5rem 5rem;
+  /* Må kunne rulles: podium, tabell og priser blir høyere enn
+     skjermen, og da lå knappene nederst utenfor rekkevidde. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Sentrer innholdet når det faktisk får plass. Vi peker på
+   elementene selv, ikke på :first-child, siden lukkeknappen
+   ligger først i DOM-en. */
+.seremoni .ser-tittel { margin-top: auto; }
+.seremoni .ser-bunn   { margin-bottom: auto; }
 .seremoni::before {
   content: '';
   position: absolute;
@@ -630,4 +640,28 @@
 .seremoni > * {
   position: relative;
   z-index: 1;
+}
+
+/* Alltid synlig vei ut av premieutdelingen */
+.ser-lukk {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--kant-lys);
+  background: rgba(17,26,43,.9);
+  color: var(--tekst);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background .18s, transform .14s, border-color .18s;
+}
+.ser-lukk:hover {
+  background: var(--rod);
+  border-color: var(--rod);
+  transform: scale(1.08);
 }

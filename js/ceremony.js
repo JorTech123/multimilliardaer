@@ -37,7 +37,20 @@
     var podium = MM.el('div', { class: 'podium' });
     var liste = MM.el('div', { class: 'ser-liste' });
     var priser = MM.el('div', { class: 'ser-priser' });
-    var bunn = MM.el('div', { class: 'rad', style: 'gap:.6rem;margin-top:1.4rem;position:relative' });
+    var bunn = MM.el('div', { class: 'rad ser-bunn', style: 'gap:.6rem;margin-top:1.4rem;position:relative;flex-wrap:wrap;justify-content:center' });
+
+    /* Alltid synlig vei ut, uansett hvor langt ned man har rullet */
+    var lukk = MM.el('button', {
+      class: 'ser-lukk',
+      title: 'Lukk premieutdelingen',
+      html: '✕'
+    });
+    lukk.addEventListener('click', function () {
+      lag.remove();
+      kjorer = false;
+      if (stoppTromme) stoppTromme();
+    });
+    lag.appendChild(lukk);
 
     lag.appendChild(tittel);
     lag.appendChild(under);
