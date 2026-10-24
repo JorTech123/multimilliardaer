@@ -1,0 +1,14 @@
+# Operativsystem
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Redigeringsprogram
+.vscode/
+.idea/
+*.swp
+*~
+
+# Lokale notater og hemmeligheter
+*.local.js
+hemmelig.txt

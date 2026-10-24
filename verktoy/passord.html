@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multimilliardær – passordverktøy</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Outfit:wght@700;800&amp;family=Roboto+Mono&amp;display=swap">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<main class="side">
+  <div class="midtboks">
+    <h1 class="logo logo-stor midt">Passord</h1>
+    <div class="logo-under midt" style="margin-bottom:1.6rem">Kontrollsum for js/config.js</div>
+
+    <div class="kort">
+      <div class="feltgruppe">
+        <label class="merke" for="p">Skriv passordet du vil bruke</label>
+        <input id="p" class="felt" type="text" value="Starveien" autocomplete="off" spellcheck="false">
+      </div>
+
+      <label class="merke">Lim denne linja inn i <code>js/config.js</code></label>
+      <pre id="ut" class="panel tall" style="white-space:pre-wrap;word-break:break-all;margin:0 0 .8rem"></pre>
+
+      <button id="kopi" class="knapp knapp-gull knapp-blokk">Kopier linja</button>
+
+      <hr class="skille">
+      <div class="liten dim">
+        Husk to steder:
+        <ol style="margin:.4rem 0 0;padding-left:1.2rem">
+          <li>Linja over inn i <code>js/config.js</code> (erstatt <code>PASSORD_HASH</code>-linja)</li>
+          <li>Selve passordet som skriptegenskap <code>PASSORD</code> i Apps Script-prosjektet</li>
+        </ol>
+        Kontrollsummen er ikke kryptografisk sterk &mdash; den holder nysgjerrige ute, ikke en angriper.
+        Den virkelige sperra er at Apps Script krever riktig passord for å skrive.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="../js/util.js"></script>
+<script>
+(function () {
+  var p = document.getElementById('p');
+  var ut = document.getElementById('ut');
+  var kopi = document.getElementById('kopi');
+
+  function regn() {
+    var h = MM.hash(p.value.trim());
+    ut.textContent = "    PASSORD_HASH: '" + h + "',";
+  }
+  p.addEventListener('input', regn);
+  kopi.addEventListener('click', function () {
+    navigator.clipboard.writeText(ut.textContent.trim()).then(function () {
+      MM.toast('Kopiert', 'ok', 1800);
+    }, function () {
+      MM.toast('Marker teksten og kopier manuelt', 'feil');
+    });
+  });
+  regn();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multimilliardær – motortest</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Outfit:wght@700;800&amp;family=Roboto+Mono&amp;display=swap">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  .utskrift { font-family: var(--font-tall); font-size: .78rem; white-space: pre-wrap;
+              max-height: 52vh; overflow-y: auto; }
+  .ok   { color: var(--gronn); }
+  .brudd{ color: var(--rod); font-weight: 700; }
+</style>
+</head>
+<body>
+<main class="side" style="align-items:flex-start;padding-top:2rem">
+  <div class="bred">
+    <h1 class="logo logo-stor midt">Motortest</h1>
+    <div class="logo-under midt" style="margin-bottom:1.6rem">Spiller hele partier automatisk og sjekker at reglene holder</div>
+
+    <div class="kort">
+      <div class="knapprad" style="margin-bottom:1rem">
+        <button id="kjor" class="knapp knapp-gull">Kjør 200 partier</button>
+        <button id="kjor1" class="knapp">Kjør 1 parti (detaljert)</button>
+      </div>
+      <div id="sammendrag" class="stat-nett" style="margin-bottom:1rem"></div>
+      <div id="ut" class="panel utskrift"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../js/config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var ut = document.getElementById('ut');
+  var sammendrag = document.getElementById('sammendrag');
+
+  function skriv(t, klasse) {
+    var d = document.createElement('div');
+    if (klasse) d.className = klasse;
+    d.textContent = t;
+    ut.appendChild(d);
+    ut.scrollTop = ut.scrollHeight;
+  }
+
+  var brudd = [];
+  function sjekk(betingelse, melding) {
+    if (!betingelse) brudd.push(melding);
+    return betingelse;
+  }
+
+  /* ----------------------------------------------------------
+     Invarianter som alltid skal holde
+     ---------------------------------------------------------- */
+  function sjekkTilstand(s, hvor) {
+    MM.SERIES.forEach(function (se) {
+      var sum = s.bank.aksjer[se.id];
+      s.spillere.forEach(function (p) { sum += p.aksjer[se.id]; });
+      sjekk(sum === MM.AKSJER_PER_SERIE,
+        hvor + ': aksjer i ' + se.id + ' er ' + sum + ', skal være ' + MM.AKSJER_PER_SERIE);
+      sjekk(s.bank.aksjer[se.id] >= 0, hvor + ': banken har negativt antall aksjer i ' + se.id);
+    });
+
+    s.spillere.forEach(function (p) {
+      sjekk(isFinite(p.cash), hvor + ': ' + p.navn + ' har ugyldig kontantbeholdning: ' + p.cash);
+      sjekk(p.gjeld >= 0 && p.gjeld <= MM.GJELDSBREV_MAKS,
+        hvor + ': ' + p.navn + ' har ' + p.gjeld + ' gjeldsbrev');
+      sjekk(p.pos >= 0 && p.pos < MM.BOARD.length, hvor + ': ' + p.navn + ' står på felt ' + p.pos);
+      MM.SERIES.forEach(function (se) {
+        sjekk(p.aksjer[se.id] >= 0, hvor + ': ' + p.navn + ' har negative aksjer i ' + se.id);
+      });
+      sjekk(isFinite(MM.Engine.formue(s, p)), hvor + ': ' + p.navn + ' har ugyldig formue');
+    });
+
+    sjekk(s.ola.pos >= 0 && s.ola.pos < MM.BOARD.length, hvor + ': Ola står på felt ' + s.ola.pos);
+
+    for (var pos in s.tomter) {
+      var d = s.tomter[pos];
+      var felt = MM.BOARD[Number(pos)];
+      if (d.eier) {
+        sjekk(!!MM.Engine.sp(s, d.eier), hvor + ': ' + felt.navn + ' eies av ukjent spiller');
+      } else {
+        sjekk(d.hus === 0 && !d.hotell && !d.slott && !d.pant,
+          hvor + ': eierløs tomt ' + felt.navn + ' har bygg eller pant');
+      }
+      sjekk(d.hus >= 0 && d.hus <= 4, hvor + ': ' + felt.navn + ' har ' + d.hus + ' hus');
+      sjekk(!(d.hus > 0 && d.hotell), hvor + ': ' + felt.navn + ' har både hus og hotell');
+      sjekk(!(d.slott && !felt.slott), hvor + ': slott bygget på ' + felt.navn);
+      sjekk(!(d.pant && (d.hus > 0 || d.hotell || d.slott)),
+        hvor + ': pantsatt tomt ' + felt.navn + ' har bygg');
+    }
+  }
+
+  /* ----------------------------------------------------------
+     En enkel robotspiller
+     ---------------------------------------------------------- */
+  function tilfeldig(liste) { return liste[Math.floor(Math.random() * liste.length)]; }
+
+  function robotTrekk(s) {
+    var pid = MM.Engine.aktivId(s);
+    var p = MM.Engine.sp(s, pid);
+    if (!p) return null;
+
+    if (s.auksjon) {
+      var kandidater = MM.Engine.levende(s).filter(function (q) {
+        return s.auksjon.passert.indexOf(q.id) < 0;
+      });
+      if (!kandidater.length || Date.now() > s.auksjon.utgaar) {
+        return { type: 'AUKSJON_SLUTT', pid: pid, tving: true };
+      }
+      var byr = tilfeldig(kandidater);
+      var bud = (s.auksjon.hoyeste || 0) + s.auksjon.steg;
+      var takst = MM.BOARD[s.auksjon.pos].pris;
+      if (Math.random() < 0.45 && bud <= byr.cash && bud < takst * 1.3) {
+        return { type: 'BUD', pid: byr.id, sum: bud };
+      }
+      return { type: 'PASS', pid: byr.id };
+    }
+
+    var v = s.tur.ventende;
+    if (v) {
+      switch (v.type) {
+        case 'kjop':
+          if (p.cash > MM.BOARD[v.pos].pris * 1.4 && Math.random() < 0.8) {
+            return { type: 'KJOP', pid: pid };
+          }
+          return { type: 'TIL_AUKSJON', pid: pid };
+        case 'auksjon-start': return { type: 'TIL_AUKSJON', pid: pid };
+        case 'kort':          return { type: 'KORT_OK', pid: pid };
+        case 'casino':
+          return { type: 'CASINO', pid: pid,
+                   innsats: Math.random() < 0.5 ? Math.min(10000, Math.max(0, p.cash)) : 0,
+                   terning: [MM.terning()] };
+        case 'bors': {
+          var mulige = [];
+          s.spillere.forEach(function (q) {
+            if (q.id === pid || q.konkurs) return;
+            MM.SERIES.forEach(function (se) {
+              if ((q.aksjer[se.id] || 0) > 0 && MM.Engine.kursPris(s, se.id) * 2 <= p.cash) {
+                mulige.push({ fra: q.id, serie: se.id });
+              }
+            });
+          });
+          if (mulige.length && Math.random() < 0.6) {
+            var m = tilfeldig(mulige);
+            return { type: 'BORS_KJOP', pid: pid, fra: m.fra, serie: m.serie, antall: 1 };
+          }
+          return { type: 'BORS_HOPP_OVER', pid: pid };
+        }
+        case 'ferie-ankomst': return { type: 'FERIE_ANKOMST', pid: pid, bli: Math.random() < 0.3 };
+        case 'skaff-penger':  return skaffPenger(s, MM.Engine.sp(s, v.pid) || p);
+      }
+    }
+
+    if (s.tur.steg === 'ferie-valg') {
+      var steg = Math.min(p.ferieOpphold, MM.FERIE_TRAPP.length - 1);
+      if (Math.random() < 0.6 || MM.FERIE_TRAPP[steg] > p.cash) {
+        return { type: 'FERIE_REIS', pid: pid, terning: [MM.terning()] };
+      }
+      return { type: 'FERIE_BLI', pid: pid };
+    }
+
+    if (s.tur.steg === 'ola-kast') return { type: 'KAST_OLA', pid: pid, terning: MM.terningPar() };
+    if (s.tur.steg === 'bil-kast') return { type: 'KAST_BIL', pid: pid, terning: MM.terningPar() };
+
+    if (s.tur.steg === 'handel') {
+      if (p.cash < 0) return skaffPenger(s, p);
+
+      /* Bygg av og til */
+      if (Math.random() < 0.55) {
+        var kan = [];
+        MM.tomter.forEach(function (f) {
+          if (!MM.Engine.kanBygge(s, pid, f.pos) && p.cash > f.husPris * 1.6) kan.push(f.pos);
+        });
+        if (kan.length) return { type: 'BYGG', pid: pid, pos: tilfeldig(kan) };
+      }
+      /* Handle aksjer av og til */
+      if (Math.random() < 0.4) {
+        var kjopbare = MM.SERIES.filter(function (se) {
+          var k = MM.Engine.kursPris(s, se.id);
+          return k > 0 && s.bank.aksjer[se.id] > 0 && p.cash > k * 2;
+        });
+        if (kjopbare.length) {
+          return { type: 'KJOP_AKSJER', pid: pid, serie: tilfeldig(kjopbare).id, antall: 1 };
+        }
+      }
+      if (Math.random() < 0.08 && p.gjeld < MM.GJELDSBREV_MAKS) {
+        return { type: 'LAAN', pid: pid };
+      }
+      return { type: 'AVSLUTT_TUR', pid: pid };
+    }
+
+    return null;
+  }
+
+  function skaffPenger(s, p) {
+    var selgbare = MM.SERIES.filter(function (se) {
+      return (p.aksjer[se.id] || 0) > 0 && MM.Engine.kursPris(s, se.id) > 0;
+    });
+    if (selgbare.length) {
+      return { type: 'SELG_AKSJER', pid: p.id, serie: tilfeldig(selgbare).id, antall: 1 };
+    }
+    var medBygg = [], uPant = [];
+    MM.tomter.forEach(function (f) {
+      var d = s.tomter[String(f.pos)];
+      if (d.eier !== p.id) return;
+      if (d.hus > 0 || d.hotell || d.slott) medBygg.push(f.pos);
+      else if (!d.pant) uPant.push(f.pos);
+    });
+    if (medBygg.length) return { type: 'SELG_BYGG', pid: p.id, pos: medBygg[0] };
+    if (uPant.length) return { type: 'PANTSETT', pid: p.id, pos: uPant[0] };
+    if (p.gjeld < MM.GJELDSBREV_MAKS) return { type: 'LAAN', pid: p.id };
+    return { type: 'GI_OPP', pid: p.id };
+  }
+
+  /* ----------------------------------------------------------
+     Ett parti
+     ---------------------------------------------------------- */
+  function spillParti(antallSpillere, maksTrekk, detaljert) {
+    var s = MM.Engine.nyttSpill('TEST', { mal: 2000000, startKapital: 150000, tidsgrenseMin: 0 });
+    for (var i = 0; i < antallSpillere; i++) {
+      s = MM.Engine.handling(s, {
+        type: 'BLI_MED', pid: 'p' + i, navn: 'Robot ' + (i + 1), figur: MM.FIGURER[i].id
+      }).state;
+    }
+    s = MM.Engine.handling(s, { type: 'START', pid: 'p0' }).state;
+
+    var trekk = 0, feil = 0, sisteFeil = null;
+    while (s.fase === 'spiller' && trekk < maksTrekk) {
+      var a = robotTrekk(s);
+      if (!a) { brudd.push('Roboten fant ingen lovlig handling ved steg ' + s.tur.steg); break; }
+      try {
+        var r = MM.Engine.handling(s, a);
+        s = r.state;
+        if (detaljert) r.hendelser.forEach(function (h) { skriv('  ' + h.tekst); });
+      } catch (e) {
+        feil++;
+        sisteFeil = a.type + ': ' + e.message;
+        /* Avviste handlinger er normalt (roboten prøver ting), men ikke
+           i det uendelige — da avslutter vi turen i stedet. */
+        if (feil > 60) { brudd.push('For mange avviste handlinger. Siste: ' + sisteFeil); break; }
+        if (s.tur.steg === 'handel' && !s.tur.ventende) {
+          try { s = MM.Engine.handling(s, { type: 'AVSLUTT_TUR', pid: MM.Engine.aktivId(s) }).state; }
+          catch (e2) { brudd.push('Fastlåst: ' + e2.message); break; }
+        }
+      }
+      trekk++;
+      if (trekk % 25 === 0) sjekkTilstand(s, 'trekk ' + trekk);
+    }
+    sjekkTilstand(s, 'slutt');
+    return { s: s, trekk: trekk, feil: feil, sisteFeil: sisteFeil };
+  }
+
+  /* ----------------------------------------------------------
+     Kjøring
+     ---------------------------------------------------------- */
+  function kjor(antall, detaljert) {
+    ut.innerHTML = '';
+    brudd = [];
+    var t0 = performance.now();
+    var ferdige = 0, utTid = 0, totalTrekk = 0, grunner = {}, maksTrekk = 0;
+
+    for (var n = 0; n < antall; n++) {
+      var spillere = 2 + Math.floor(Math.random() * 5);
+      var r = spillParti(spillere, 4000, detaljert && antall === 1);
+      totalTrekk += r.trekk;
+      maksTrekk = Math.max(maksTrekk, r.trekk);
+      if (r.s.fase === 'ferdig') {
+        ferdige++;
+        var g = r.s.vinner.grunn;
+        grunner[g] = (grunner[g] || 0) + 1;
+      } else {
+        utTid++;
+      }
+      if (detaljert && antall === 1) {
+        skriv('');
+        skriv('Spillere: ' + spillere + ' · trekk: ' + r.trekk + ' · avviste: ' + r.feil);
+        if (r.s.resultat) {
+          r.s.resultat.forEach(function (x) {
+            skriv('  ' + x.plass + '. ' + x.navn + '  ' + MM.fmt(x.formue) + (x.konkurs ? '  (konkurs)' : ''));
+          });
+        }
+      }
+    }
+    var tid = Math.round(performance.now() - t0);
+
+    sammendrag.innerHTML = '';
+    [
+      ['Partier', antall],
+      ['Fullført', ferdige],
+      ['Nådde taket', utTid],
+      ['Trekk i snitt', Math.round(totalTrekk / antall)],
+      ['Flest trekk', maksTrekk],
+      ['Tid', tid + ' ms'],
+      ['Regelbrudd', brudd.length]
+    ].forEach(function (x) {
+      var b = document.createElement('div');
+      b.className = 'stat-boks';
+      b.innerHTML = '<div class="v">' + x[1] + '</div><div class="n">' + x[0] + '</div>';
+      if (x[0] === 'Regelbrudd' && x[1] > 0) b.style.borderColor = 'var(--rod)';
+      sammendrag.appendChild(b);
+    });
+
+    skriv('');
+    skriv('Slutt-årsaker: ' + JSON.stringify(grunner));
+    skriv('');
+    if (!brudd.length) {
+      skriv('Ingen regelbrudd. Alle invarianter holdt gjennom ' + antall + ' partier.', 'ok');
+    } else {
+      skriv(brudd.length + ' regelbrudd:', 'brudd');
+      var unike = {};
+      brudd.forEach(function (b) {
+        var n = b.replace(/\d+/g, '#');
+        unike[n] = (unike[n] || 0) + 1;
+      });
+      Object.keys(unike).slice(0, 40).forEach(function (k) {
+        skriv('  ' + unike[k] + '×  ' + k, 'brudd');
+      });
+    }
+    return { brudd: brudd.length, ferdige: ferdige, utTid: utTid };
+  }
+
+  document.getElementById('kjor').addEventListener('click', function () { kjor(200, false); });
+  document.getElementById('kjor1').addEventListener('click', function () { kjor(1, true); });
+  window.MM_TEST = kjor;
+
+  /* Lag et ferdig spilt parti og legg det i lokal lagring, slik at man
+     kan se på brett, spillerpanel og premieutdeling uten å spille selv.
+     Brukes bare under utvikling. */
+  window.MM_TEST_LAG = function (kode, trekk, antallSpillere, navn) {
+    var s = MM.Engine.nyttSpill(kode, { mal: 2000000, startKapital: 150000, tidsgrenseMin: 0 });
+    navn = navn || ['Jørgen', 'Kari', 'Ola', 'Ingrid', 'Petter', 'Siri'];
+    for (var i = 0; i < antallSpillere; i++) {
+      s = MM.Engine.handling(s, {
+        type: 'BLI_MED', pid: 'p' + i, navn: navn[i], figur: MM.FIGURER[i].id
+      }).state;
+    }
+    s = MM.Engine.handling(s, { type: 'START', pid: 'p0' }).state;
+    var n = 0;
+    while (s.fase === 'spiller' && n < trekk) {
+      var a = robotTrekk(s);
+      if (!a) break;
+      try { s = MM.Engine.handling(s, a).state; }
+      catch (e) {
+        if (s.tur.steg === 'handel' && !s.tur.ventende) {
+          try { s = MM.Engine.handling(s, { type: 'AVSLUTT_TUR', pid: MM.Engine.aktivId(s) }).state; }
+          catch (e2) { break; }
+        }
+      }
+      n++;
+    }
+    s.v = 1;
+    s.id = kode;
+    localStorage.setItem('mm.spill.' + kode, JSON.stringify(s));
+    localStorage.setItem('mm.apnet', JSON.stringify(MM.CONFIG.PASSORD_HASH));
+    localStorage.setItem('mm.hemmelig', JSON.stringify('Starveien'));
+    return {
+      kode: kode, fase: s.fase, trekk: n,
+      spillere: s.spillere.map(function (p) {
+        return p.navn + ' ' + MM.fmt(MM.Engine.formue(s, p)) + (p.konkurs ? ' (konkurs)' : '');
+      })
+    };
+  };
+})();
+</script>
+</body>
+</html>
