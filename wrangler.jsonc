@@ -26,15 +26,15 @@
   // Observability gjør at logger fra Workeren vises i panelet
   "observability": {
     "enabled": true
-  }
+  },
 
-  // Databasen legges til her når den er opprettet:
-  //
-  // "d1_databases": [
-  //   {
-  //     "binding": "DB",
-  //     "database_name": "multimillionaer",
-  //     "database_id": "<id-en fra D1-panelet>"
-  //   }
-  // ]
+  // Databasen. Tabellene lages av serveren selv ved første kall,
+  // så det finnes ingen migrering å kjøre.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "multimillionaer",
+      "database_id": "d9028097-6a07-41af-ab5f-697ca4bd9bb1"
+    }
+  ]
 }
