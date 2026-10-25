@@ -31,9 +31,34 @@
 
   N.init = function (cfg) {
     N.url = (cfg && cfg.url) || (MM.CONFIG && MM.CONFIG.API_URL) || '';
+    /* En relativ adresse peker på serveren som leverte siden. Åpnes
+       spillet rett fra disk finnes det ingen slik server, og da er
+       lokal modus det eneste som gir mening. */
+    if (N.url && N.url.charAt(0) === '/' && location.protocol === 'file:') N.url = '';
     N.modus = N.url ? 'sky' : 'lokal';
     N.hemmelig = MM.hent('hemmelig', '') || '';
     return N.modus;
+  };
+
+  /* Finn ut om serveren faktisk svarer der vi tror. Gjør den ikke
+     det, og det finnes en reserve, bytter vi dit. Kjøres én gang
+     ved oppstart, mens brukeren uansett taster passord. */
+  N.velgServer = function () {
+    var reserve = (MM.CONFIG && MM.CONFIG.API_RESERVE) || '';
+    if (!N.url || !reserve || N.url === reserve) return Promise.resolve(N.modus);
+
+    return fetch(N.url + '?handling=ping', { method: 'GET' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (o) {
+        if (o && o.ok) { N.serverNavn = o.motor || 'sky'; return N.modus; }
+        throw new Error('svarte ikke som ventet');
+      })
+      .catch(function () {
+        N.url = reserve;
+        N.modus = reserve ? 'sky' : 'lokal';
+        N.serverNavn = 'reserve';
+        return N.modus;
+      });
   };
 
   N.erSky = function () { return N.modus === 'sky'; };

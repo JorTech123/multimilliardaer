@@ -9,16 +9,36 @@
   MM.CONFIG = {
 
     /* ----------------------------------------------------------
-       1) Nettapp-URL fra Google Apps Script.
-          Tom streng  = lokal modus (localStorage, flere faner på
-                        samme PC kan spille sammen — fint for testing).
-          Satt URL    = ekte flerspiller over Google Regneark.
+       1) Hvor serveren ligger.
 
-          Slik får du den: se apps-script/OPPSETT.md
-          Den ser omtrent slik ut:
-          https://script.google.com/macros/s/AKfycbx..../exec
+          '/api'      = Cloudflare Pages Function i dette prosjektet.
+                        Samme adresse som spillet, så ingen CORS og
+                        ingenting å fylle inn. Dette er standarden.
+                        Oppsett: se cloudflare/OPPSETT.md
+
+          Tom streng  = lokal modus (localStorage). Flere faner på
+                        samme PC kan spille sammen. Spillet faller
+                        automatisk hit når det åpnes som fil, siden
+                        en relativ adresse ikke gir mening da.
+
+          Full URL    = en server et annet sted, for eksempel den
+                        gamle Google Apps Script-nettappen:
+                        https://script.google.com/macros/s/..../exec
        ---------------------------------------------------------- */
-    API_URL: 'https://script.google.com/macros/s/AKfycbyO4GoG9zhxL4mNAN7e59mmufJQIk2H1UXmfV_tR7KVQnwgKZi27bFwS0OUzv284gZGow/exec',
+    API_URL: '/api',
+
+    /* ----------------------------------------------------------
+       1b) Reserveserver.
+
+          Finnes ikke API_URL der siden ligger — for eksempel mens
+          spillet fortsatt kjører på GitHub Pages, eller før
+          Cloudflare er ferdig satt opp — brukes denne i stedet.
+          Spillet sjekker én gang ved oppstart og sier fra i
+          statuslampa hvilken server det endte på.
+
+          Sett til tom streng når flyttingen er ferdig.
+       ---------------------------------------------------------- */
+    API_RESERVE: 'https://script.google.com/macros/s/AKfycbyO4GoG9zhxL4mNAN7e59mmufJQIk2H1UXmfV_tR7KVQnwgKZi27bFwS0OUzv284gZGow/exec',
 
     /* ----------------------------------------------------------
        2) Passordet til hovedsiden.

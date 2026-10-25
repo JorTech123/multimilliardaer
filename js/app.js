@@ -127,8 +127,10 @@
         e.title = MM.Nett.sisteFeil;
       } else {
         e.className = 'nettstatus' + (MM.Nett.erSky() ? '' : ' lokal');
-        tekst.textContent = MM.Nett.erSky() ? 'Sky' : 'Lokal';
-        e.title = MM.Nett.erSky() ? 'Lagrer i Google Regneark' : 'Lokal modus — bare faner på denne maskinen';
+        tekst.textContent = MM.Nett.erSky() ? (MM.Nett.serverNavn === 'reserve' ? 'Reserve' : 'Sky') : 'Lokal';
+        e.title = MM.Nett.erSky()
+          ? (MM.Nett.serverNavn === 'reserve' ? 'Hovedserveren svarte ikke — bruker reserven' : 'Lagrer på serveren')
+          : 'Lokal modus — bare faner på denne maskinen';
       }
     }, 400);
     return e;
@@ -230,6 +232,7 @@
       MM.Lyd.vekk();
       document.removeEventListener('click', en);
     }, { once: true });
+    MM.Nett.velgServer();
     MM.krevPassord(function () {
       MM.nettstatus();
       /* Nettlesere nekter lyd før siden er rørt, så musikken
