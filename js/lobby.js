@@ -259,7 +259,8 @@
               MM.el('div', { class: 'liten svak', text:
                 (g.fase === 'lobby' ? 'Venter på start' : 'I gang') +
                 (g.vert ? ' · vert: ' + g.vert : '') +
-                (g.fase === 'lobby' && vetAntall ? ' · ' + g.ledigePlasser + ' ledige' : '')
+                (g.fase === 'lobby' && vetAntall ? ' · ' + g.ledigePlasser + ' ledige' : '') +
+                (g.oppdatert ? ' · ' + alder(g.oppdatert) : '')
               })
             ]),
             MM.el('span', { class: 'lapp ' + (apent ? 'lapp-gronn' : ''), text: apent ? 'Bli med' : 'Stengt' })
@@ -342,6 +343,16 @@
       ])
     ]);
     if (erVert) setTimeout(function () { navnFelt.focus(); }, 150);
+  }
+
+  /* «for 5 min siden» — så det syns hvilke bord som er glemt */
+  function alder(tid) {
+    var sek = Math.max(0, Math.round((Date.now() - tid) / 1000));
+    if (sek < 60) return 'nettopp';
+    var min = Math.round(sek / 60);
+    if (min < 60) return 'for ' + min + ' min siden';
+    var t = Math.round(min / 60);
+    return 'for ' + t + ' time' + (t > 1 ? 'r' : '') + ' siden';
   }
 
   function kopier(t) {

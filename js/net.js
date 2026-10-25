@@ -2,7 +2,7 @@
    Multimillionær — nettverkslag
    To likeverdige adaptere bak samme grensesnitt:
 
-     Sky   = Google Apps Script + Google Regneark (ekte flerspiller)
+     Sky   = Cloudflare Worker + D1 (ekte flerspiller)
      Lokal = localStorage + BroadcastChannel (flere faner på samme PC)
 
    Skriving bruker optimistisk samtidighetskontroll: klienten regner ut
@@ -45,7 +45,8 @@
      ved oppstart, mens brukeren uansett taster passord. */
   N.velgServer = function () {
     var reserve = (MM.CONFIG && MM.CONFIG.API_RESERVE) || '';
-    if (!N.url || !reserve || N.url === reserve) return Promise.resolve(N.modus);
+    var flyttet = (MM.CONFIG && MM.CONFIG.FLYTTET_TIL) || '';
+    if (!N.url) return Promise.resolve(N.modus);
 
     return fetch(N.url + '?handling=ping', { method: 'GET' })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -54,9 +55,16 @@
         throw new Error('svarte ikke som ventet');
       })
       .catch(function () {
-        N.url = reserve;
-        N.modus = reserve ? 'sky' : 'lokal';
-        N.serverNavn = 'reserve';
+        if (reserve && reserve !== N.url) {
+          N.url = reserve;
+          N.serverNavn = 'reserve';
+          return N.modus;
+        }
+        /* Ingen server her. Ligger spillet et annet sted nå, er det
+           bedre å si det rett ut enn å la folk spille videre mot
+           ingenting — eller, enda verre, mot en annen database. */
+        N.serverNavn = 'borte';
+        if (flyttet && location.href.indexOf(flyttet) !== 0) N.flyttetTil = flyttet;
         return N.modus;
       });
   };
@@ -99,7 +107,7 @@
   }
 
   /* ============================================================
-     SKY — Google Apps Script
+     SKY — serveren
      ============================================================ */
   var Sky = {
     get: function (params) {
@@ -112,7 +120,7 @@
     },
     post: function (data) {
       data.hemmelig = N.hemmelig;
-      /* Ren tekst som kropp gir ingen preflight-sjekk mot Apps Script */
+      /* Ren tekst som kropp gir ingen preflight-sjekk */
       return fetch(N.url, {
         method: 'POST',
         redirect: 'follow',

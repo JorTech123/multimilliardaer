@@ -6,7 +6,7 @@
  *  spillet selv, så kallene går til /api uten CORS og uten at
  *  config.js trenger å vite noen URL.
  *
- *  Den svarer med nøyaktig samme JSON som Apps Script-versjonen
+ *  Protokollen er den samme som den gamle Apps Script-serveren brukte,
  *  gjorde, slik at js/net.js ikke måtte endres i det hele tatt.
  *
  *  Oppsett står i cloudflare/OPPSETT.md. Kort fortalt trengs:
@@ -16,7 +16,7 @@
  */
 
 const MAKS_ALDER_DAGER = 14;        // spill eldre enn dette ryddes bort
-const LISTE_TIMER = 24;             // hvor lenge et spill vises i lobbyen
+const LISTE_TIMER = 3;              // et venterom som ikke er rørt på tre timer er forlatt
 const MAKS_TILSTAND = 900000;       // vern mot en tilstand som har løpt løpsk
 
 /* ------------------------------------------------------------
@@ -155,10 +155,15 @@ async function hentTilstand(DB, p) {
 }
 
 async function hentListe(DB) {
+  /* Bare bord man faktisk kan sette seg ved.
+     Spill som er i gang kan ikke bli med i, så de fylte bare lista
+     med rader merket «Stengt». Er man med i et slikt spill fra før,
+     kommer man tilbake via «Fortsett som ...» eller ved å taste
+     koden. Og et venterom som ikke er rørt på noen timer er forlatt. */
   const grense = Date.now() - LISTE_TIMER * 3600 * 1000;
   const { results } = await DB.prepare(
     `SELECT kode, v, fase, oppdatert, tilstand FROM spill
-      WHERE oppdatert > ? AND fase != 'ferdig'
+      WHERE oppdatert > ? AND fase = 'lobby'
       ORDER BY oppdatert DESC LIMIT 25`
   ).bind(grense).all();
 

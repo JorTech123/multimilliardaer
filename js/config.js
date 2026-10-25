@@ -22,8 +22,7 @@
                         en relativ adresse ikke gir mening da.
 
           Full URL    = en server et annet sted, for eksempel den
-                        gamle Google Apps Script-nettappen:
-                        https://script.google.com/macros/s/..../exec
+                        en Worker på et annet domene.
        ---------------------------------------------------------- */
     API_URL: '/api',
 
@@ -38,7 +37,20 @@
 
           Sett til tom streng når flyttingen er ferdig.
        ---------------------------------------------------------- */
-    API_RESERVE: 'https://script.google.com/macros/s/AKfycbyO4GoG9zhxL4mNAN7e59mmufJQIk2H1UXmfV_tR7KVQnwgKZi27bFwS0OUzv284gZGow/exec',
+    API_RESERVE: '',
+
+    /* ----------------------------------------------------------
+       1c) Hvor spillet bor nå.
+
+          Svarer ikke serveren der siden ligger — typisk fordi noen
+          har en gammel adresse i bokmerkene — vises en beskjed med
+          lenke hit, i stedet for at spillet bare virker halvveis.
+
+          Dette er viktigere enn det ser ut: uten det vil en gammel
+          adresse kunne snakke med en annen database, og man sitter
+          og lurer på hvorfor spillet man nettopp laget ikke finnes.
+       ---------------------------------------------------------- */
+    FLYTTET_TIL: 'https://multimillionaer.jorgenst.workers.dev',
 
     /* ----------------------------------------------------------
        2) Passordet til hovedsiden.
@@ -48,8 +60,8 @@
           Vil du bytte passord:
             a) åpne verktoy/passord.html, skriv inn nytt passord,
                kopier kontrollsummen hit
-            b) sett samme passord som skriptegenskap PASSORD
-               i Apps Script-prosjektet
+            b) sett samme passord som hemmeligheten PASSORD
+               i Cloudflare
        ---------------------------------------------------------- */
     PASSORD_HASH: '23f1c022b1fac672',
 

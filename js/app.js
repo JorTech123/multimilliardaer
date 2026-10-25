@@ -223,6 +223,38 @@
   };
 
   /* ------------------------------------------------------------
+     Spillet har flyttet
+     Vises når serveren ikke svarer der siden ligger, men vi vet
+     hvor den nye adressen er.
+     ------------------------------------------------------------ */
+  MM.visFlyttet = function (adresse) {
+    if (MM.$('#flyttet')) return;
+    var lag = MM.el('div', {
+      id: 'flyttet',
+      class: 'side',
+      style: 'position:fixed;inset:0;z-index:9900;background:var(--bg)'
+    }, [
+      MM.el('div', { class: 'kort midtboks steg midt' }, [
+        MM.el('div', { style: 'font-size:3rem', text: '📦' }),
+        MM.el('h1', { class: 'logo logo-stor', text: 'Flyttet' }),
+        MM.el('p', { class: 'dim', html:
+          'Spillet ligger ikke her lenger. Denne adressen har ingen server, ' +
+          'og hvis du spiller videre her, havner du i et annet sett med spill ' +
+          'enn vennene dine.' }),
+        MM.el('div', { style: 'height:1rem' }),
+        MM.el('a', {
+          class: 'knapp knapp-gull knapp-stor knapp-blokk',
+          href: adresse,
+          html: '→ &nbsp;Ta meg til spillet'
+        }),
+        MM.el('div', { class: 'liten svak', style: 'margin-top:.8rem',
+          text: 'Oppdater bokmerket ditt til den nye adressen' })
+      ])
+    ]);
+    document.body.appendChild(lag);
+  };
+
+  /* ------------------------------------------------------------
      Oppstart
      ------------------------------------------------------------ */
   MM.boot = function (cb) {
@@ -232,7 +264,9 @@
       MM.Lyd.vekk();
       document.removeEventListener('click', en);
     }, { once: true });
-    MM.Nett.velgServer();
+    MM.Nett.velgServer().then(function () {
+      if (MM.Nett.flyttetTil) MM.visFlyttet(MM.Nett.flyttetTil);
+    });
     MM.krevPassord(function () {
       MM.nettstatus();
       /* Nettlesere nekter lyd før siden er rørt, så musikken

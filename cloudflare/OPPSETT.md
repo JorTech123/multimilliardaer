@@ -142,10 +142,3 @@ D1 gir 5 millioner leste og 100 000 skrevne rader i døgnet.
 Seks spillere som poller i tre timer blir rundt 40 000 forespørsler. Du kan
 altså spille to lange kvelder på én dag før det nærmer seg taket.
 
----
-
-## Den gamle serveren
-
-`apps-script/` ligger igjen i repoet, og nettappen virker fortsatt. Det er
-greit å ha som reserve en stund. Vil du rydde: slett mappa, og arkiver
-distribusjonen i Apps Script.

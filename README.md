@@ -2,7 +2,7 @@
 
 Et norsk flerspiller-brettspill som kjører rett i nettleseren. Tomter, børs og
 gjeldsbrev. Hver spiller styrer fra sin egen telefon, brettet vises på en TV, og
-alt lagres i ditt eget Google Regneark.
+alt lagres hos Cloudflare.
 
 Spillet følger **reglene** fra Multimillionær (Damm, 1988/2017), men brett,
 tomtenavn, selskaper, sjansekort og tall er skrevet fra bunnen av. Det er ikke
@@ -98,17 +98,18 @@ Tomtebaronen og Dobbeltmesteren.
 
 ---
 
-## Lagring i Google Regneark
+## Serveren
 
 Uten oppsett kjører spillet i **lokal modus** — alt ligger i nettleseren, og bare
 faner på samme maskin kan spille sammen. Det holder til å prøve spillet.
 
-For ekte flerspiller over nett trenger du et Google Regneark som database.
-Oppskriften står i **[apps-script/OPPSETT.md](apps-script/OPPSETT.md)** og tar
-rundt fem minutter.
+For ekte flerspiller over nett trenger du en server. Oppskriften står i
+**[cloudflare/OPPSETT.md](cloudflare/OPPSETT.md)** og gjøres i sin helhet fra
+nettleseren — ingenting å installere.
 
-Kort fortalt: lim `apps-script/Code.gs` inn i et Apps Script-prosjekt, publiser det
-som nettapp, og lim adressen inn i `API_URL` i [js/config.js](js/config.js).
+Kort fortalt: koble repoet til Cloudflare Workers, lag en D1-database og bind
+den som `DB`. Serveren ligger i `functions/api.js` og svarer på `/api` — samme
+adresse som spillet, så `config.js` trenger ingen URL.
 
 Regnearket får tre faner:
 
@@ -142,10 +143,10 @@ spillet privat, bruk et privat repo.
 
 1. Åpne `verktoy/passord.html`, skriv inn det nye passordet, kopier linja
 2. Lim den inn over `PASSORD_HASH` i `js/config.js`
-3. Sett samme passord som skriptegenskapen `PASSORD` i Apps Script-prosjektet
+3. Sett samme passord som hemmeligheten `PASSORD` i Cloudflare
 
 Passordsperra i grensesnittet er akkurat det navnet sier: en sperre, ikke en
-sikring. Den virkelige begrensningen er at Apps Script krever riktig passord for å
+sikring. Den virkelige begrensningen er at serveren krever riktig passord for å
 skrive til regnearket.
 
 ---
@@ -160,7 +161,7 @@ board.html          Storskjerm for TV eller projektor
 js/config.js        Det eneste du trenger å redigere
 js/data.js          Brett, serier, sjansekort, figurer
 js/engine.js        Regelmotoren. Rene funksjoner, ingen DOM
-js/net.js           Synkronisering mot Google Regneark, eller lokalt
+js/net.js           Synkronisering mot serveren, eller lokalt
 js/brett.js         Tegner brettet og flytter brikkene
 js/app.js           Sesjon, passordlås, hjelpetekster
 js/lobby.js         Hovedsiden
@@ -172,7 +173,8 @@ js/util.js          Formatering, lyd, terninger, konfetti
 css/app.css         Grunnstil og komponenter
 css/board.css       Brett, børstavle og premieutdeling
 
-apps-script/Code.gs Serveren
+functions/api.js    Serveren (Cloudflare)
+worker.js           Inngang for Workers-modellen
 verktoy/server.ps1  Liten testserver for lokal kjøring
 verktoy/test.html   Spiller hundrevis av partier automatisk
 verktoy/passord.html Lager kontrollsum for nytt passord
@@ -182,8 +184,8 @@ verktoy/passord.html Lager kontrollsum for nytt passord
 
 Spillet er turbasert, så det trenger ingen tung server. Klienten regner ut den nye
 tilstanden selv med `engine.js` og sender den med et forventet versjonsnummer.
-Apps Script tar et lås, sjekker at versjonen stemmer, og skriver bare hvis den gjør
-det. Ellers får klienten fersk tilstand tilbake og regner på nytt. De andre
+Serveren oppdaterer raden bare hvis versjonen fortsatt stemmer — én SQL-setning
+som SQLite gjør atomisk. Ellers får klienten fersk tilstand tilbake og regner på nytt. De andre
 klientene spør om endringer hvert 1,6. sekund.
 
 Fordi alle kjører nøyaktig samme motor, blir resultatet likt hos alle.
