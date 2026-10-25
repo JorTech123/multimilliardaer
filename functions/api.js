@@ -1,4 +1,7 @@
-/**
+    return ekstra + (res || []).reduce((sum, r) => sum + ((r.meta && r.meta.changes) || 0), 0);
+  } catch (ignorer) {
+    return ekstra;   /* opprydding er ikke verdt å feile på */
+  }/**
  * ============================================================
  *  Multimillionær — server på Cloudflare
  *
@@ -308,6 +311,21 @@ async function lagreResultat(DB, d) {
  */
 async function rydd(DB) {
   const naa = Date.now();
+  let ekstra = 0;
+
+  /* Bord uten en eneste spiller. De oppstår når noen trykker
+     «Nytt spill» og så ombestemmer seg: raden lages før noen rekker
+     å bli med. Ti minutters nåde, så er det tydelig forlatt.
+     Egen setning, siden den er avhengig av at SQLite har JSON. */
+  try {
+    const r = await DB.prepare(
+      `DELETE FROM spill
+        WHERE fase = 'lobby' AND oppdatert < ?
+          AND json_array_length(json_extract(tilstand, '$.spillere')) = 0`
+    ).bind(naa - 10 * 60000).run();
+    ekstra = (r.meta && r.meta.changes) || 0;
+  } catch (ignorer) { /* uten JSON-støtte tar toterskelen dem i stedet */ }
+
   try {
     const res = await DB.batch([
       DB.prepare(`DELETE FROM spill WHERE fase = 'lobby'  AND oppdatert < ?`).bind(naa - 2 * 3600000),
@@ -315,9 +333,9 @@ async function rydd(DB) {
       DB.prepare(`DELETE FROM spill WHERE oppdatert < ?`).bind(naa - MAKS_ALDER_DAGER * 86400000),
       DB.prepare(`DELETE FROM hendelser WHERE kode NOT IN (SELECT kode FROM spill)`)
     ]);
-    return (res || []).reduce((sum, r) => sum + ((r.meta && r.meta.changes) || 0), 0);
+    return ekstra + (res || []).reduce((sum, r) => sum + ((r.meta && r.meta.changes) || 0), 0);
   } catch (ignorer) {
-    return 0;   /* opprydding er ikke verdt å feile på */
+    return ekstra;   /* opprydding er ikke verdt å feile på */
   }
 }
 
