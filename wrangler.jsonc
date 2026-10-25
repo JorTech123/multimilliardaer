@@ -1,0 +1,40 @@
+{
+  // ============================================================
+  //  Multimillionær — oppsett for Cloudflare Workers
+  //
+  //  Uten denne filen blir prosjektet bare statiske filer, og /api
+  //  svarer 404. Den forteller Cloudflare at worker.js skal kjøre,
+  //  og hvilke stier som skal gå dit i stedet for til filene.
+  // ============================================================
+
+  "name": "multimillionaer",
+  "compatibility_date": "2026-01-01",
+
+  // Serverkoden
+  "main": "worker.js",
+
+  "assets": {
+    // Spillet ligger i rota av repoet, ikke i en byggemappe
+    "directory": "./",
+    "binding": "ASSETS",
+
+    // Statiske filer serveres først og belastes ikke som
+    // Worker-kall. Bare disse stiene vekker serverkoden.
+    "run_worker_first": ["/api", "/api/*"]
+  },
+
+  // Observability gjør at logger fra Workeren vises i panelet
+  "observability": {
+    "enabled": true
+  }
+
+  // Databasen legges til her når den er opprettet:
+  //
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "multimillionaer",
+  //     "database_id": "<id-en fra D1-panelet>"
+  //   }
+  // ]
+}
