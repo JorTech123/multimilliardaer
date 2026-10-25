@@ -78,6 +78,8 @@ export async function onRequest(context) {
         case 'opprett':  return opprett(env.DB, d);
         case 'lagre':    return lagre(env.DB, d);
         case 'resultat': return lagreResultat(env.DB, d);
+        case 'slett':    return slett(env.DB, d);
+        case 'rydd':     return svar({ ok: true, slettet: await rydd(env.DB) });
         default:         return feil('Ukjent handling');
       }
     }
@@ -155,6 +157,10 @@ async function hentTilstand(DB, p) {
 }
 
 async function hentListe(DB) {
+  /* Rydder først. Lista hentes hver gang noen ser etter et bord,
+     så da holder databasen seg ren uten at noen trenger å tænke på det. */
+  await rydd(DB);
+
   /* Bare bord man faktisk kan sette seg ved.
      Spill som er i gang kan ikke bli med i, så de fylte bare lista
      med rader merket «Stengt». Er man med i et slikt spill fra før,
@@ -283,12 +289,63 @@ async function lagreResultat(DB, d) {
   return svar({ ok: true });
 }
 
-/* Rydd bort gamle spill. Kjøres når noen oppretter et nytt. */
+/**
+ * Rydd bort spill ingen har bruk for lenger.
+ *
+ * Tre terskler, fordi et forlatt venterom og et ferdigspilt parti
+ * ikke er det samme:
+ *
+ *   venterom    ingen har rørt det på to timer, og det ble aldri
+ *               startet. Det er glemt.
+ *   ferdigspilt partiet er over. Vi beholder det et døgn så man
+ *               rekker å se premieutdelingen igjen. Resultatene
+ *               ligger i egen tabell og overlever uansett.
+ *   alt annet   to uker. Fanger opp partier som ble forlatt
+ *               midtveis.
+ *
+ * Kjøres når noen henter lista, altså hver gang noen ser etter et
+ * bord. Da holder det seg rent av seg selv.
+ */
 async function rydd(DB) {
+  const naa = Date.now();
   try {
-    const grense = Date.now() - MAKS_ALDER_DAGER * 86400000;
-    await DB.prepare('DELETE FROM hendelser WHERE kode IN (SELECT kode FROM spill WHERE oppdatert < ?)')
-      .bind(grense).run();
-    await DB.prepare('DELETE FROM spill WHERE oppdatert < ?').bind(grense).run();
-  } catch (ignorer) { /* opprydding er ikke verdt å feile på */ }
+    const res = await DB.batch([
+      DB.prepare(`DELETE FROM spill WHERE fase = 'lobby'  AND oppdatert < ?`).bind(naa - 2 * 3600000),
+      DB.prepare(`DELETE FROM spill WHERE fase = 'ferdig' AND oppdatert < ?`).bind(naa - 24 * 3600000),
+      DB.prepare(`DELETE FROM spill WHERE oppdatert < ?`).bind(naa - MAKS_ALDER_DAGER * 86400000),
+      DB.prepare(`DELETE FROM hendelser WHERE kode NOT IN (SELECT kode FROM spill)`)
+    ]);
+    return (res || []).reduce((sum, r) => sum + ((r.meta && r.meta.changes) || 0), 0);
+  } catch (ignorer) {
+    return 0;   /* opprydding er ikke verdt å feile på */
+  }
+}
+
+/* Slett ett bestemt spill. Bare den som er vert kan det, så man
+   ikke river bordet vekk under noen andre. Ferdigspilte og tomme
+   spill kan hvem som helst rydde bort. */
+async function slett(DB, d) {
+  const kode = String(d.kode || '').toUpperCase();
+  if (!kode) return feil('Mangler spillkode');
+
+  const rad = await DB.prepare('SELECT fase, tilstand FROM spill WHERE kode = ?').bind(kode).first();
+  if (!rad) return svar({ ok: true, slettet: 0 });
+
+  let erVert = false;
+  let tomt = false;
+  try {
+    const s = JSON.parse(rad.tilstand);
+    erVert = !!d.pid && s.vertId === d.pid;
+    tomt = !(s.spillere || []).length;
+  } catch (ignorer) { tomt = true; }
+
+  if (!erVert && !tomt && rad.fase !== 'ferdig') {
+    return feil('Bare spillverten kan slette et spill som er i gang', 'ikkevert');
+  }
+
+  await DB.batch([
+    DB.prepare('DELETE FROM spill WHERE kode = ?').bind(kode),
+    DB.prepare('DELETE FROM hendelser WHERE kode = ?').bind(kode)
+  ]);
+  return svar({ ok: true, slettet: 1 });
 }

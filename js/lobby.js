@@ -232,7 +232,31 @@
             text: 'Ingen aktive spill akkurat nå. Tast en kode, eller lag et nytt spill.' }));
           return;
         }
-        bordliste.appendChild(MM.el('div', { class: 'panel-tittel', text: 'Aktive spill' }));
+        var tittel = MM.el('div', { class: 'panel-tittel' }, [
+          MM.el('span', { text: 'Aktive spill' })
+        ]);
+        /* Lista rydder seg selv, men den som vil ha det ryddig nå
+           skal slippe å vente på at terskelen går ut. */
+        var ryddKnapp = MM.el('button', {
+          class: 'lapp', style: 'cursor:pointer;border-style:dashed',
+          title: 'Fjern forlatte og ferdigspilte bord',
+          text: 'Rydd'
+        });
+        ryddKnapp.addEventListener('click', function () {
+          MM.Lyd.klikk();
+          ryddKnapp.textContent = 'Rydder …';
+          MM.Nett.ryddOpp().then(function (r) {
+            MM.toast(r && r.slettet
+              ? 'Ryddet bort <b>' + r.slettet + '</b> bord'
+              : 'Ingenting å rydde', 'ok', 2200);
+            visBliMed(kode, erVert);
+          }).catch(function () {
+            ryddKnapp.textContent = 'Rydd';
+            MM.toast('Fikk ikke ryddet', 'feil');
+          });
+        });
+        tittel.appendChild(ryddKnapp);
+        bordliste.appendChild(tittel);
         spill.forEach(function (g) {
           /* En eldre serverversjon sender verken spillerliste eller
              ledige plasser. Da viser vi bordet som åpent og lar
@@ -535,7 +559,29 @@
           MM.el('button', {
             class: 'knapp knapp-tom knapp-liten', text: 'Forlat',
             onclick: function () { MM.Sesjon.skriv({ kode: null }); MM.Nett.stopp(); visVelg(); }
-          })
+          }),
+          /* Verten rydder opp etter seg selv. Uten dette blir hvert
+             bord man ombestemmer seg om liggende i lista i to timer. */
+          (MM.Nett.tilstand && MM.Nett.tilstand.vertId === minId)
+            ? MM.el('button', {
+                class: 'knapp knapp-tom knapp-liten',
+                style: 'color:var(--rod);border-color:rgba(255,90,110,.4)',
+                text: 'Slett bordet',
+                onclick: function () {
+                  if (!confirm('Slette dette bordet? Det forsvinner for alle som er med.')) return;
+                  var k = MM.Nett.kode;
+                  MM.Nett.slettSpill(k, minId).then(function () {
+                    MM.Nett.stopp();
+                    MM.Sesjon.skriv({ kode: null });
+                    MM.glem('sisteSesjon');
+                    MM.toast('Bordet <b>' + MM.esc(k) + '</b> er slettet', 'ok');
+                    visVelg();
+                  }).catch(function (e) {
+                    MM.toast(MM.esc(e.message || 'Fikk ikke slettet'), 'feil');
+                  });
+                }
+              })
+            : null
         ])
       ]),
       MM.el('div', { class: 'liten midt dim', style: 'margin-top:1rem',

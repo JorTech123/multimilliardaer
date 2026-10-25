@@ -404,6 +404,38 @@
   N.lokaleSpill = function () { return Lokal.alleSpill(); };
 
   /* ------------------------------------------------------------
+     Opprydding
+     ------------------------------------------------------------ */
+
+  /* Slett ett spill. Serveren slipper det bare gjennom hvis du er
+     vert, eller hvis bordet er tomt eller ferdigspilt. */
+  N.slettSpill = function (kode, pid) {
+    if (!N.erSky()) {
+      MM.glem('spill.' + String(kode).toUpperCase());
+      return Promise.resolve({ ok: true, slettet: 1 });
+    }
+    return Sky.post({ handling: 'slett', kode: String(kode).toUpperCase(), pid: pid });
+  };
+
+  /* Be serveren rydde bort forlatte og ferdigspilte bord nå */
+  N.ryddOpp = function () {
+    if (!N.erSky()) {
+      var grense = Date.now() - 2 * 3600000;
+      var n = 0;
+      Lokal.alleSpill().forEach(function (s) {
+        if (!s || !s.id) return;
+        var gammel = (s.oppdatert || 0) < grense;
+        if (s.fase === 'ferdig' || (s.fase === 'lobby' && gammel)) {
+          MM.glem('spill.' + s.id);
+          n++;
+        }
+      });
+      return Promise.resolve({ ok: true, slettet: n });
+    }
+    return Sky.post({ handling: 'rydd' });
+  };
+
+  /* ------------------------------------------------------------
      Aktive spill — så man kan velge bord i stedet for å taste kode
      ------------------------------------------------------------ */
   N.hentSpill = function () {
