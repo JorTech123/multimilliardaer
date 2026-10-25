@@ -1,7 +1,4 @@
-    return ekstra + (res || []).reduce((sum, r) => sum + ((r.meta && r.meta.changes) || 0), 0);
-  } catch (ignorer) {
-    return ekstra;   /* opprydding er ikke verdt å feile på */
-  }/**
+/**
  * ============================================================
  *  Multimillionær — server på Cloudflare
  *
